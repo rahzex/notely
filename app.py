@@ -15,8 +15,11 @@ CONFIG_PATH = Path(__file__).parent / "db_config.json"
 def load_config():
     """Load DB path from config file."""
     if CONFIG_PATH.exists():
-        with open(CONFIG_PATH) as f:
-            return json.load(f).get("db_path")
+        try:
+            with open(CONFIG_PATH) as f:
+                return json.load(f).get("db_path")
+        except json.JSONDecodeError:
+            return None
     return None
 
 
@@ -39,7 +42,7 @@ def get_db():
 @app.before_request
 def check_db_config():
     """Block non-config requests if DB path is not configured."""
-    if not DB and request.path != "/" and not request.path.startswith("/api/config"):
+    if not DB and request.path != "/" and not request.path.startswith("/api/config") and not request.path.startswith("/static/"):
         return jsonify({"error": "Database not configured"}), 503
 
 

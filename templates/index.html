@@ -79,17 +79,18 @@
 <div class="first-launch-backdrop" id="first-launch-overlay">
   <div class="first-launch-card">
     <h2>Welcome to Notely</h2>
-    <p>Choose where to store your notes database.</p>
+    <p>Select an existing database file or choose a folder to create a new one.</p>
     <div class="first-launch-path">
-      <label class="modal-label" for="first-launch-path-input">Database path</label>
+      <div class="browse-mode-toggle">
+        <button class="toggle-btn active" id="toggle-file" type="button">File</button>
+        <button class="toggle-btn" id="toggle-folder" type="button">Folder</button>
+      </div>
+      <label class="modal-label" for="first-launch-path-input" id="first-launch-label">Database file</label>
       <div style="display: flex; gap: 8px;">
         <input class="modal-input" id="first-launch-path-input" type="text" placeholder="/path/to/notes.db" style="margin-bottom: 0; flex: 1;" />
         <button class="btn-browse" id="btn-browse-first-launch" type="button">Browse...</button>
       </div>
-      <div class="modal-checkbox-row">
-        <input type="checkbox" id="first-launch-create-new" checked />
-        <label for="first-launch-create-new">Create new database at this path</label>
-      </div>
+      <div class="first-launch-hint" id="first-launch-hint"></div>
     </div>
     <div class="modal-error" id="first-launch-error"></div>
     <div class="modal-actions" style="justify-content: center; margin-top: 16px;">

@@ -163,4 +163,8 @@ header h1 span { color: var(--accent); }
 .first-launch-card { background: var(--card); border-radius: 20px; box-shadow: 0 12px 48px rgba(0,0,0,0.16); padding: 44px 38px 32px; width: 460px; max-width: 90vw; text-align: center; animation: fadeSlideUp 0.4s ease; }
 .first-launch-card h2 { font-size: 26px; font-weight: 700; margin-bottom: 8px; letter-spacing: -0.3px; }
 .first-launch-card p { font-size: 14px; color: var(--muted); margin-bottom: 24px; line-height: 1.5; }
-.first-launch-path { text-align: left; margin-bottom: 0; }
+.first-launch-path { text-align: left; margin-bottom: 20px; }
+.browse-mode-toggle { display: flex; gap: 4px; margin-bottom: 12px; background: var(--bg); border-radius: 8px; padding: 3px; width: fit-content; }
+.toggle-btn { background: transparent; border: none; padding: 5px 14px; border-radius: 6px; font-size: 12px; font-weight: 500; cursor: pointer; color: var(--muted); transition: all var(--anim-fast); }
+.toggle-btn.active { background: var(--card); color: var(--text); box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+.first-launch-hint { font-size: 11px; color: var(--muted); margin-top: 6px; min-height: 16px; transition: opacity var(--anim-fast); }

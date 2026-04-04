@@ -29,10 +29,14 @@
   var settingsError    = $("#settings-error");
   var firstLaunchOv    = $("#first-launch-overlay");
   var firstLaunchPathInput = $("#first-launch-path-input");
-  var firstLaunchCreateNew = $("#first-launch-create-new");
   var firstLaunchError = $("#first-launch-error");
+  var firstLaunchHint = $("#first-launch-hint");
+  var firstLaunchLabel = $("#first-launch-label");
   var btnFirstLaunchConnect = $("#btn-first-launch-connect");
   var btnBrowseFirstLaunch = $("#btn-browse-first-launch");
+  var toggleFile = $("#toggle-file");
+  var toggleFolder = $("#toggle-folder");
+  var firstLaunchBrowseMode = { current: "file" };
 
   /* === State === */
   var editingId = null;
@@ -146,6 +150,7 @@
       currentDbPath = result.data.db_path || path;
       hideFirstLaunchOverlay();
       hideSettingsModal();
+      showMainButtons();
       loadFolders();
       loadNotes();
       if (onSuccess) onSuccess();
@@ -179,6 +184,22 @@
   function browseFolder(inputEl, errorEl) {
     inputEl.disabled = true;
     NotelyApi.browseFile().then(function(result) {
+      if (result.cancelled) return;
+      if (result.error) {
+        showError(errorEl, result.error);
+        return;
+      }
+      inputEl.value = result.path;
+    }).catch(function(err) {
+      showError(errorEl, "Browse failed: " + err.message);
+    }).finally(function() {
+      inputEl.disabled = false;
+    });
+  }
+
+  function browseFolderPath(inputEl, errorEl) {
+    inputEl.disabled = true;
+    NotelyApi.browseFolder().then(function(result) {
       if (result.cancelled) return;
       if (result.error) {
         showError(errorEl, result.error);
@@ -246,25 +267,13 @@
     browseFolder(settingsPathInput, settingsError);
   });
 
-  /* First-launch */
-  btnFirstLaunchConnect.addEventListener("click", function() {
-    connectDb(firstLaunchPathInput.value.trim(), firstLaunchError);
-  });
-  firstLaunchPathInput.addEventListener("keydown", function(e) {
-    if (e.key === "Enter") btnFirstLaunchConnect.click();
-  });
-  btnBrowseFirstLaunch.addEventListener("click", function() {
-    browseFolder(firstLaunchPathInput, firstLaunchError);
-  });
-
   /* === DB Config check on startup === */
   function checkConfig() {
     NotelyApi.getConfig().then(function(cfg) {
       currentDbPath = cfg.db_path || null;
       if (!cfg.configured) {
+        updateFirstLaunchUI();
         showFirstLaunchOverlay();
-        btnNew.style.display = "none";
-        btnSettings.style.display = "none";
       } else {
         loadFolders();
         loadNotes();
@@ -273,6 +282,68 @@
       loadFolders();
       loadNotes();
     });
+  }
+
+  /* === First-launch browse mode toggle === */
+  function updateFirstLaunchUI() {
+    btnNew.style.display = "none";
+    btnSettings.style.display = "none";
+    if (firstLaunchBrowseMode.current === "file") {
+      toggleFile.classList.add("active");
+      toggleFolder.classList.remove("active");
+      firstLaunchLabel.textContent = "Database file";
+      firstLaunchPathInput.placeholder = "/path/to/notes.db";
+      firstLaunchHint.textContent = "";
+    } else {
+      toggleFolder.classList.add("active");
+      toggleFile.classList.remove("active");
+      firstLaunchLabel.textContent = "Folder for database";
+      firstLaunchPathInput.placeholder = "/path/to/folder";
+      firstLaunchHint.textContent = "A new notes.db will be created inside this folder.";
+    }
+  }
+
+  toggleFile.addEventListener("click", function() {
+    firstLaunchBrowseMode.current = "file";
+    updateFirstLaunchUI();
+  });
+
+  toggleFolder.addEventListener("click", function() {
+    firstLaunchBrowseMode.current = "folder";
+    updateFirstLaunchUI();
+  });
+
+  /* First-launch browse with mode toggle */
+  btnBrowseFirstLaunch.addEventListener("click", function() {
+    if (firstLaunchBrowseMode.current === "file") {
+      browseFolder(firstLaunchPathInput, firstLaunchError);
+    } else {
+      browseFolderPath(firstLaunchPathInput, firstLaunchError);
+    }
+  });
+
+  /* First-launch connect: resolve folder to db path if needed */
+  btnFirstLaunchConnect.addEventListener("click", function() {
+    var path = firstLaunchPathInput.value.trim();
+    if (!path) {
+      showError(firstLaunchError, "Please enter a path.");
+      return;
+    }
+    if (firstLaunchBrowseMode.current === "folder") {
+      // Ensure trailing slash, then append db filename
+      if (!path.endsWith("/")) path = path + "/";
+      path = path + "notes.db";
+      firstLaunchPathInput.value = path;
+    }
+    connectDb(path, firstLaunchError);
+  });
+  firstLaunchPathInput.addEventListener("keydown", function(e) {
+    if (e.key === "Enter") btnFirstLaunchConnect.click();
+  });
+
+  function showMainButtons() {
+    btnNew.style.display = "";
+    btnSettings.style.display = "";
   }
 
   /* === Register editor callbacks with sidebar === */

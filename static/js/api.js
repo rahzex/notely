@@ -72,6 +72,14 @@ var NotelyApi = (function() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ mode: "file" })
       }).then(function(r) { return r.json(); });
+    },
+
+    browseFolder: function() {
+      return fetch("/api/config/browse", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ mode: "folder" })
+      }).then(function(r) { return r.json(); });
     }
   };
 
