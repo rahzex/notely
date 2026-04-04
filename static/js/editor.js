@@ -37,6 +37,25 @@
   var toggleFile = $("#toggle-file");
   var toggleFolder = $("#toggle-folder");
   var firstLaunchBrowseMode = { current: "file" };
+  var btnTheme = $("#btn-theme");
+
+  /* === Theme === */
+  function applyTheme(theme) {
+    if (theme === "dark") {
+      document.documentElement.setAttribute("data-theme", "dark");
+    } else {
+      document.documentElement.removeAttribute("data-theme");
+    }
+    localStorage.setItem("notely-theme", theme);
+  }
+
+  function toggleTheme() {
+    var current = document.documentElement.getAttribute("data-theme") === "dark" ? "dark" : "light";
+    applyTheme(current === "dark" ? "light" : "dark");
+  }
+
+  applyTheme(localStorage.getItem("notely-theme") || "light");
+  btnTheme.addEventListener("click", toggleTheme);
 
   /* === State === */
   var editingId = null;
