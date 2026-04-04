@@ -20,9 +20,9 @@ A lightweight, self-hosted note-taking application built with Flask and SQLite. 
 
 <img width="1440" height="818" alt="Screenshot 2026-04-04 at 9 34 22 PM" src="https://github.com/user-attachments/assets/7e117546-6cfe-4678-a74d-037ca8331e17" />
 
-
 <img width="1440" height="712" alt="Screenshot 2026-04-04 at 9 30 40 PM" src="https://github.com/user-attachments/assets/91edee7e-4809-4a92-b1c9-fbe528d17d4a" />
 
+<img width="1440" height="818" alt="Screenshot 2026-04-04 at 11 05 13 PM" src="https://github.com/user-attachments/assets/5aa9e595-72b1-45b1-bd5a-dd51d8e239fd" />
 
 
 
