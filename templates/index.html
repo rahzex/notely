@@ -112,6 +112,41 @@
   .btn-del-editor { background: var(--danger); color: #fff; }
   .btn-del-editor:hover { opacity: 0.85; }
   .btn-del-editor:active { transform: scale(0.97); }
+
+  /* === Settings modal === */
+  .modal-backdrop { display: none; position: fixed; inset: 0; z-index: 1000; background: rgba(0,0,0,0.35); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); align-items: center; justify-content: center; }
+  .modal-backdrop.open { display: flex; animation: fadeIn 0.2s ease; }
+  .modal-card { background: var(--card); border-radius: 16px; box-shadow: 0 8px 32px rgba(0,0,0,0.12); padding: 28px 24px 24px; width: 420px; max-width: 90vw; animation: fadeSlideUp 0.3s ease; }
+  .modal-card h3 { font-size: 16px; font-weight: 600; margin-bottom: 16px; }
+  .modal-label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.6px; color: var(--muted); margin-bottom: 6px; display: block; }
+  .modal-path-display { font-size: 12px; padding: 8px 10px; background: var(--bg); border-radius: 8px; color: var(--text); word-break: break-all; margin-bottom: 16px; font-family: -apple-system, BlinkMacSystemFont, monospace; }
+  .modal-input { width: 100%; padding: 8px 12px; border: 1px solid var(--border); border-radius: 8px; font-size: 13px; font-family: -apple-system, BlinkMacSystemFont, monospace; background: var(--card); outline: none; transition: border-color var(--anim-fast); margin-bottom: 12px; }
+  .modal-input:focus { border-color: var(--accent); }
+  .modal-checkbox-row { display: flex; align-items: center; gap: 8px; margin-bottom: 16px; font-size: 13px; color: var(--text); }
+  .modal-checkbox-row input[type="checkbox"] { accent-color: var(--accent); }
+  .modal-error { font-size: 12px; color: var(--danger); margin-bottom: 12px; display: none; }
+  .modal-error.visible { display: block; }
+  .modal-actions { display: flex; gap: 10px; justify-content: flex-end; }
+  .modal-actions button { padding: 8px 18px; border: none; border-radius: 10px; font-size: 13px; font-weight: 500; cursor: pointer; transition: opacity var(--anim-fast), transform var(--anim-fast); }
+  .btn-modal-cancel { background: var(--bg); color: var(--text); }
+  .btn-modal-cancel:hover { opacity: 0.75; }
+  .btn-modal-connect { background: var(--accent); color: #fff; }
+  .btn-modal-connect:hover { opacity: 0.85; }
+  .btn-modal-connect:active { transform: scale(0.97); }
+  .btn-browse:hover { background: rgba(0,0,0,0.06) !important; }
+  .btn-browse:active { transform: scale(0.97); }
+
+  /* === Settings button === */
+  #btn-settings { background: none; border: none; cursor: pointer; padding: 6px; border-radius: 8px; color: var(--text); transition: background var(--anim-fast); display: flex; }
+  #btn-settings:hover { background: rgba(0,0,0,0.06); }
+
+  /* === First-launch overlay === */
+  .first-launch-backdrop { display: none; position: fixed; inset: 0; z-index: 2000; background: rgba(0,0,0,0.5); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); align-items: center; justify-content: center; }
+  .first-launch-backdrop.open { display: flex; animation: fadeIn 0.3s ease; }
+  .first-launch-card { background: var(--card); border-radius: 20px; box-shadow: 0 12px 48px rgba(0,0,0,0.16); padding: 44px 38px 32px; width: 460px; max-width: 90vw; text-align: center; animation: fadeSlideUp 0.4s ease; }
+  .first-launch-card h2 { font-size: 26px; font-weight: 700; margin-bottom: 8px; letter-spacing: -0.3px; }
+  .first-launch-card p { font-size: 14px; color: var(--muted); margin-bottom: 24px; line-height: 1.5; }
+  .first-launch-path { text-align: left; margin-bottom: 0; }
 </style>
 </head>
 <body>
@@ -121,6 +156,9 @@
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" class="sidebar-icon"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
   </button>
   <h1>not<span>e</span>ly</h1>
+  <button id="btn-settings" title="Settings">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+  </button>
   <button id="btn-new">+ New Note</button>
 </header>
 
@@ -155,6 +193,52 @@
   </div>
 </div>
 
+<!-- Settings Modal -->
+<div class="modal-backdrop" id="settings-modal">
+  <div class="modal-card">
+    <h3>Database Path</h3>
+    <label class="modal-label">Current database</label>
+    <div class="modal-path-display" id="settings-current-path">Not configured</div>
+    <label class="modal-label" for="settings-path-input">New path</label>
+    <div style="display: flex; gap: 8px;">
+      <input class="modal-input" id="settings-path-input" type="text" placeholder="/path/to/notes.db" style="margin-bottom: 0; flex: 1;" />
+      <button class="btn-browse" id="btn-browse-settings" type="button" style="padding: 8px 14px; border: 1px solid var(--border); border-radius: 8px; background: var(--card); cursor: pointer; font-size: 13px; font-weight: 500; color: var(--text); white-space: nowrap; height: 34px; margin-top: 1px;">Browse...</button>
+    </div>
+    <div class="modal-checkbox-row">
+      <input type="checkbox" id="settings-create-new" />
+      <label for="settings-create-new">Create new database at this path if it doesn't exist</label>
+    </div>
+    <div class="modal-error" id="settings-error"></div>
+    <div class="modal-actions">
+      <button class="btn-modal-cancel" id="btn-settings-cancel">Cancel</button>
+      <button class="btn-modal-connect" id="btn-settings-save">Connect</button>
+    </div>
+  </div>
+</div>
+
+<!-- First-Launch Overlay -->
+<div class="first-launch-backdrop" id="first-launch-overlay">
+  <div class="first-launch-card">
+    <h2>Welcome to Notely</h2>
+    <p>Choose where to store your notes database.</p>
+    <div class="first-launch-path">
+      <label class="modal-label" for="first-launch-path-input">Database path</label>
+      <div style="display: flex; gap: 8px;">
+        <input class="modal-input" id="first-launch-path-input" type="text" placeholder="/path/to/notes.db" style="margin-bottom: 0; flex: 1;" />
+        <button class="btn-browse" id="btn-browse-first-launch" type="button" style="padding: 8px 14px; border: 1px solid var(--border); border-radius: 8px; background: var(--card); cursor: pointer; font-size: 13px; font-weight: 500; color: var(--text); white-space: nowrap; height: 34px; margin-top: 1px;">Browse...</button>
+      </div>
+      <div class="modal-checkbox-row">
+        <input type="checkbox" id="first-launch-create-new" checked />
+        <label for="first-launch-create-new">Create new database at this path</label>
+      </div>
+    </div>
+    <div class="modal-error" id="first-launch-error"></div>
+    <div class="modal-actions" style="justify-content: center; margin-top: 16px;">
+      <button class="btn-modal-connect" id="btn-first-launch-connect">Connect</button>
+    </div>
+  </div>
+</div>
+
 <script>
 (function() {
   "use strict";
@@ -178,6 +262,18 @@
   var expandedFolders = {};    /* { folderId: bool } */
   var searchTerm = "";
   var quill = null;
+  var currentDbPath = null;
+
+  /* === DOM refs (settings) === */
+  var settingsModal    = $("#settings-modal");
+  var firstLaunchOv    = $("#first-launch-overlay");
+  var settingsPathInput  = $("#settings-path-input");
+  var settingsCreateNew  = $("#settings-create-new");
+  var settingsCurrentPath = $("#settings-current-path");
+  var settingsError      = $("#settings-error");
+  var firstLaunchPathInput = $("#first-launch-path-input");
+  var firstLaunchCreateNew = $("#first-launch-create-new");
+  var firstLaunchError     = $("#first-launch-error");
 
   /* === Helpers === */
   function stripHtml(s) {
@@ -561,9 +657,154 @@
     });
   });
 
+  /* === DB Config: First-launch === */
+  function showFirstLaunchOverlay() {
+    firstLaunchOv.classList.add("open");
+    firstLaunchPathInput.focus();
+  }
+
+  function hideFirstLaunchOverlay() {
+    firstLaunchOv.classList.remove("open");
+  }
+
+  function showSettingsModal() {
+    settingsModal.classList.add("open");
+    settingsCurrentPath.textContent = currentDbPath || "Not configured";
+    settingsPathInput.value = "";
+    settingsError.style.display = "none";
+    settingsCreateNew.checked = true;
+  }
+
+  function hideSettingsModal() {
+    settingsModal.classList.remove("open");
+  }
+
+  function showError(el, msg) {
+    el.textContent = msg;
+    el.style.display = "block";
+  }
+
+  function connectDb(path, createNew, errorEl, onSuccess) {
+    if (!path) {
+      showError(errorEl, "Please enter a path.");
+      return;
+    }
+    errorEl.style.display = "none";
+    fetch("/api/config", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ db_path: path })
+    }).then(function(r) {
+      return r.json().then(function(d) { return { ok: r.ok, data: d }; });
+    }).then(function(result) {
+      if (!result.ok) {
+        showError(errorEl, result.data.error || "Failed to connect.");
+        return;
+      }
+      currentDbPath = result.data.db_path || path;
+      hideFirstLaunchOverlay();
+      hideSettingsModal();
+      loadFolders();
+      loadNotes();
+      if (onSuccess) onSuccess();
+    }).catch(function(err) {
+      showError(errorEl, "Network error: " + err.message);
+    });
+  }
+
+  /* === Browse button (native folder picker via server) === */
+  function browseFolder(inputEl, errorEl) {
+    inputEl.disabled = true;
+    fetch("/api/config/browse", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ mode: "file" })
+    }).then(function(r) { return r.json(); })
+    .then(function(result) {
+      if (result.cancelled) return;
+      if (result.error) {
+        showError(errorEl, result.error);
+        return;
+      }
+      inputEl.value = result.path;
+    })
+    .catch(function(err) {
+      showError(errorEl, "Browse failed: " + err.message);
+    })
+    .finally(function() {
+      inputEl.disabled = false;
+    });
+  }
+
+  $("#btn-browse-settings").addEventListener("click", function() {
+    browseFolder(settingsPathInput, settingsError);
+  });
+
+  $("#btn-browse-first-launch").addEventListener("click", function() {
+    browseFolder(firstLaunchPathInput, firstLaunchError);
+  });
+
+  /* First-launch "Connect" */
+  $("#btn-first-launch-connect").addEventListener("click", function() {
+    var path = firstLaunchPathInput.value.trim();
+    connectDb(path, firstLaunchCreateNew.checked, firstLaunchError);
+  });
+
+  /* First-launch Enter key */
+  firstLaunchPathInput.addEventListener("keydown", function(e) {
+    if (e.key === "Enter") $("#btn-first-launch-connect").click();
+  });
+
+  /* Settings "Connect" */
+  $("#btn-settings-save").addEventListener("click", function() {
+    var path = settingsPathInput.value.trim();
+    connectDb(path, settingsCreateNew.checked, settingsError, function() {
+      settingsCurrentPath.textContent = currentDbPath;
+    });
+  });
+
+  /* Settings Enter key */
+  settingsPathInput.addEventListener("keydown", function(e) {
+    if (e.key === "Enter") $("#btn-settings-save").click();
+  });
+
+  /* Settings open / close */
+  $("#btn-settings").addEventListener("click", function() {
+    showSettingsModal();
+  });
+  $("#btn-settings-cancel").addEventListener("click", function() {
+    hideSettingsModal();
+  });
+
+  /* Close settings on backdrop click */
+  settingsModal.addEventListener("click", function(e) {
+    if (e.target === settingsModal) hideSettingsModal();
+  });
+
+  /* === DB Config: Check on startup === */
+  function checkConfig() {
+    fetch("/api/config")
+      .then(function(r) { return r.json(); })
+      .then(function(cfg) {
+        currentDbPath = cfg.db_path || null;
+        if (!cfg.configured) {
+          showFirstLaunchOverlay();
+          $("#btn-new").style.display = "none";
+          $("#btn-settings").style.display = "none";
+        } else {
+          loadFolders();
+          loadNotes();
+        }
+      })
+      .catch(function() {
+        /* If config endpoint fails, still try to load notes */
+        loadFolders();
+        loadNotes();
+      });
+  }
+
   /* === Bootstrap === */
-  loadFolders();
-  loadNotes();
+  checkConfig();
 })();
 </script>
 </body>

@@ -1,11 +1,32 @@
+import os
+import platform
+import subprocess
 import sqlite3
 import json
 import requests
+from pathlib import Path
 from bs4 import BeautifulSoup
 from flask import Flask, render_template, request, jsonify, g
 
 app = Flask(__name__)
-DB = "notes.db"
+CONFIG_PATH = Path(__file__).parent / "db_config.json"
+
+
+def load_config():
+    """Load DB path from config file."""
+    if CONFIG_PATH.exists():
+        with open(CONFIG_PATH) as f:
+            return json.load(f).get("db_path")
+    return None
+
+
+def save_config(db_path):
+    """Persist DB path to config file."""
+    with open(CONFIG_PATH, "w") as f:
+        json.dump({"db_path": db_path}, f)
+
+
+DB = load_config()  # None on first launch
 
 
 def get_db():
@@ -13,6 +34,13 @@ def get_db():
         g.db = sqlite3.connect(DB)
         g.db.row_factory = sqlite3.Row
     return g.db
+
+
+@app.before_request
+def check_db_config():
+    """Block non-config requests if DB path is not configured."""
+    if not DB and request.path != "/" and not request.path.startswith("/api/config"):
+        return jsonify({"error": "Database not configured"}), 503
 
 
 @app.teardown_appcontext
@@ -169,7 +197,7 @@ def start_background_preview(note_id, urls):
                     previews.append(fetch_preview(u))
                 except Exception:
                     continue
-            if previews:
+            if previews and DB:
                 db = sqlite3.connect(DB)
                 preview_json = json.dumps(previews)
                 db.execute(
@@ -251,7 +279,237 @@ def preview_url():
     return jsonify(fetch_preview(url))
 
 
-init_db()
+def validate_existing_db(path):
+    """Check that an existing file is a valid SQLite DB with our tables."""
+    try:
+        db = sqlite3.connect(path)
+        tables = [r[0] for r in db.execute(
+            "SELECT name FROM sqlite_master WHERE type='table'").fetchall()]
+        db.close()
+        if "notes" not in tables and "folders" not in tables:
+            return "Database file exists but does not contain Notely tables."
+        return None
+    except sqlite3.DatabaseError:
+        return "File exists but is not a valid SQLite database."
+    except Exception as e:
+        return str(e)
+
+
+def _pick_file_mac():
+    """macOS: native file picker (shows all files, .db is checked after)."""
+    result = subprocess.run([
+        "osascript", "-e", '''
+            tell application "System Events"
+                activate
+                set result to choose file with prompt "Select a database file (.db)"
+                return POSIX path of result
+            end tell
+        '''
+    ], capture_output=True, text=True, timeout=120)
+    if result.returncode != 0:
+        return None  # cancelled
+    return result.stdout.strip()
+
+
+def _pick_folder_mac():
+    """macOS: native folder picker."""
+    result = subprocess.run([
+        "osascript", "-e", '''
+            tell application "System Events"
+                activate
+                set result to choose folder with prompt "Select database folder:"
+                return POSIX path of result
+            end tell
+        '''
+    ], capture_output=True, text=True, timeout=120)
+    if result.returncode != 0:
+        return None
+    return result.stdout.strip()
+
+
+def _pick_file_linux():
+    """Linux: zenity > kdialog > python3/tkinter."""
+    # Try zenity
+    try:
+        result = subprocess.run([
+            "zenity", "--file-selection",
+            "--title", "Select a database file (.db)",
+            "--file-filter", "DB files|*.db"
+        ], capture_output=True, text=True, timeout=120)
+        if result.returncode == 0 and result.stdout.strip():
+            return result.stdout.strip()
+    except (FileNotFoundError, Exception):
+        pass
+    # Try kdialog
+    try:
+        result = subprocess.run([
+            "kdialog", "--title", "Select a database file (.db)",
+            "--getopenfilename", ".", "*.db"
+        ], capture_output=True, text=True, timeout=120)
+        if result.returncode == 0 and result.stdout.strip():
+            return result.stdout.strip()
+    except (FileNotFoundError, Exception):
+        pass
+    return None
+
+
+def _pick_folder_linux():
+    """Linux: zenity > kdialog directory picker."""
+    # Try zenity
+    try:
+        result = subprocess.run([
+            "zenity", "--file-selection", "--directory",
+            "--title", "Select database folder:"
+        ], capture_output=True, text=True, timeout=120)
+        if result.returncode == 0 and result.stdout.strip():
+            return result.stdout.strip()
+    except (FileNotFoundError, Exception):
+        pass
+    # Try kdialog
+    try:
+        result = subprocess.run([
+            "kdialog", "--title", "Select database folder:",
+            "--getexistingdirectory", "/"
+        ], capture_output=True, text=True, timeout=120)
+        if result.returncode == 0 and result.stdout.strip():
+            return result.stdout.strip()
+    except (FileNotFoundError, Exception):
+        pass
+    return None
+
+
+def _pick_file_windows():
+    """Windows: PowerShell OpenFileDialog."""
+    script = r"""
+Add-Type -AssemblyName System.Windows.Forms
+$dlg = New-Object System.Windows.Forms.OpenFileDialog
+$dlg.Filter = 'DB files (*.db)|*.db'
+$dlg.Title = 'Select a database file (.db)'
+$dlg.InitialDirectory = [Environment]::GetFolderPath('MyDocuments')
+if ($dlg.ShowDialog() -eq 'OK') { $dlg.FileName }
+"""
+    result = subprocess.run(
+        ["powershell", "-NoProfile", "-Command", script],
+        capture_output=True, text=True, timeout=120, encoding="utf-8"
+    )
+    if result.stdout and result.returncode == 0:
+        return result.stdout.strip()
+    return None
+
+
+def _pick_folder_windows():
+    """Windows: PowerShell FolderBrowserDialog."""
+    script = r"""
+Add-Type -AssemblyName System.Windows.Forms
+$dlg = New-Object System.Windows.Forms.FolderBrowserDialog
+$dlg.Description = 'Select database folder:'
+$dlg.RootFolder = 'MyComputer'
+if ($dlg.ShowDialog() -eq 'OK') { $dlg.SelectedPath }
+"""
+    result = subprocess.run(
+        ["powershell", "-NoProfile", "-Command", script],
+        capture_output=True, text=True, timeout=120, encoding="utf-8"
+    )
+    if result.stdout and result.returncode == 0:
+        return result.stdout.strip()
+    return None
+
+
+@app.route("/api/config/browse", methods=["POST"])
+def browse_folder():
+    """Open a cross-platform native file/folder picker dialog."""
+    data = request.json or {}
+    mode = data.get("mode", "file")  # "file" or "folder"
+    system = platform.system()
+
+    try:
+        if system == "Darwin":
+            # macOS - use osascript
+            if mode == "file":
+                path = _pick_file_mac()
+            else:
+                path = _pick_folder_mac()
+        elif system == "Linux":
+            if mode == "file":
+                path = _pick_file_linux()
+            else:
+                path = _pick_folder_linux()
+        elif system == "Windows":
+            if mode == "file":
+                path = _pick_file_windows()
+            else:
+                path = _pick_folder_windows()
+        else:
+            return jsonify({"error": f"Unsupported platform: {system}"}), 500
+
+        if path is None:
+            return jsonify({"cancelled": True})
+
+        if mode == "file" and not path.endswith(".db"):
+            return jsonify({"error": "Please select a .db file."})
+
+        return jsonify({"path": path})
+    except subprocess.TimeoutExpired:
+        return jsonify({"error": "Dialog timed out."}), 500
+    except FileNotFoundError:
+        return jsonify({"error": "No native file dialog tool found on this system."}), 500
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/config", methods=["GET"])
+def get_config():
+    if DB:
+        return jsonify({"configured": True, "db_path": DB})
+    return jsonify({"configured": False})
+
+
+@app.route("/api/config", methods=["POST"])
+def set_config():
+    global DB
+    data = request.json
+    new_path = data.get("db_path", "").strip()
+
+    if not new_path:
+        return jsonify({"error": "Database path is required."}), 400
+
+    if not os.path.isabs(new_path):
+        return jsonify({"error": "Path must be absolute."}), 400
+
+    parent = os.path.dirname(new_path)
+    if parent and not os.path.exists(parent):
+        return jsonify({"error": f"Parent directory does not exist: {parent}"}), 400
+
+    if not os.access(parent, os.W_OK) and parent:
+        return jsonify({"error": f"No write permission for directory: {parent}"}), 400
+
+    if os.path.isfile(new_path):
+        err = validate_existing_db(new_path)
+        if err:
+            return jsonify({"error": err}), 400
+        # Ensure schema exists in case we switched to a DB without our tables
+        try:
+            db = sqlite3.connect(new_path)
+            db.execute("SELECT 1 FROM notes LIMIT 1")
+            db.close()
+        except sqlite3.OperationalError:
+            # Tables missing, recreate them
+            pass
+        # Set path, then run init to ensure tables exist
+        save_config(new_path)
+        DB = new_path
+        init_db()
+    else:
+        # Create a new DB at this path
+        save_config(new_path)
+        DB = new_path
+        init_db()
+
+    return jsonify({"ok": True, "db_path": DB})
+
+
+if DB:
+    init_db()
 
 if __name__ == "__main__":
     app.run(debug=True, port=5100)
