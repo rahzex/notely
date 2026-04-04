@@ -125,3 +125,7 @@ Database path is stored in `db_config.json`. To change it, use the `/api/config`
 ## License
 
 MIT
+
+---
+
+*Built with [Claude Code](https://claude.ai/code) using Qwen 3.6 Plus via [OpenRouter](https://openrouter.ai/).*
