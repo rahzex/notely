@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Notely</title>
+<link href="/static/quill.snow.css?v=2" rel="stylesheet">
+<link href="/static/css/styles.css?v=1" rel="stylesheet">
+<script src="/static/quill.js?v=2"></script>
+<script>
+  (function(){var t=localStorage.getItem("notely-theme");if(t==="dark")document.documentElement.setAttribute("data-theme","dark")})();
+</script>
+</head>
+<body>
+
+<header>
+  <button id="sidebar-toggle" title="Toggle sidebar">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" class="sidebar-icon"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+  </button>
+  <h1>not<span>e</span>ly</h1>
+  <button id="btn-settings" title="Settings">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+  </button>
+  <button id="btn-theme" title="Toggle theme">
+    <svg class="icon-sun" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+    <svg class="icon-moon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+  </button>
+  <button id="btn-new">+ New Note</button>
+</header>
+
+<div class="layout">
+  <nav class="sidebar" id="sidebar">
+    <div class="sidebar-header">Your Notes</div>
+    <div class="search-box"><input class="search-input" id="search-input" type="text" placeholder="Search notes..." /></div>
+    <div class="folders-section">
+      <div class="folders-header">
+        <span>Folders</span>
+        <button class="btn-add-folder" id="btn-add-folder" title="New folder">+</button>
+      </div>
+      <div id="folders-list"></div>
+    </div>
+  </nav>
+  <div class="main">
+    <div id="welcome" class="visible">
+      <svg width="56" height="56" fill="none" stroke="#86868b" stroke-width="1.4"><rect x="10" y="10" width="36" height="40" rx="3"/><line x1="18" y1="24" x2="38" y2="24"/><line x1="18" y1="32" x2="33" y2="32"/></svg>
+      <p>Select a note or create a new one.</p>
+    </div>
+    <div id="editor-card">
+      <div class="editor-wrap">
+        <input class="title-input" id="inp-title" placeholder="Title" />
+        <div id="quill-editor"></div>
+        <div class="editor-actions">
+          <button class="btn-clear" id="btn-clear">Clear</button>
+          <button class="btn-save-main" id="btn-save">Save Note</button>
+          <button class="btn-del-editor" id="btn-del-editor" style="display:none">Delete</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Settings Modal -->
+<div class="modal-backdrop" id="settings-modal">
+  <div class="modal-card">
+    <h3>Database Path</h3>
+    <label class="modal-label">Current database</label>
+    <div class="modal-path-display" id="settings-current-path">Not configured</div>
+    <label class="modal-label" for="settings-path-input">New path</label>
+    <div style="display: flex; gap: 8px;">
+      <input class="modal-input" id="settings-path-input" type="text" placeholder="/path/to/notes.db" style="margin-bottom: 0; flex: 1;" />
+      <button class="btn-browse" id="btn-browse-settings" type="button">Browse...</button>
+    </div>
+    <div class="modal-checkbox-row">
+      <input type="checkbox" id="settings-create-new" />
+      <label for="settings-create-new">Create new database at this path if it doesn't exist</label>
+    </div>
+    <div class="modal-error" id="settings-error"></div>
+    <div class="modal-actions">
+      <button class="btn-modal-cancel" id="btn-settings-cancel">Cancel</button>
+      <button class="btn-modal-connect" id="btn-settings-save">Connect</button>
+    </div>
+  </div>
+</div>
+
+<!-- First-Launch Overlay -->
+<div class="first-launch-backdrop" id="first-launch-overlay">
+  <div class="first-launch-card">
+    <h2>Welcome to Notely</h2>
+    <p>Select an existing database file or choose a folder to create a new one.</p>
+    <div class="first-launch-path">
+      <div class="browse-mode-toggle">
+        <button class="toggle-btn active" id="toggle-file" type="button">File</button>
+        <button class="toggle-btn" id="toggle-folder" type="button">Folder</button>
+      </div>
+      <label class="modal-label" for="first-launch-path-input" id="first-launch-label">Database file</label>
+      <div style="display: flex; gap: 8px;">
+        <input class="modal-input" id="first-launch-path-input" type="text" placeholder="/path/to/notes.db" style="margin-bottom: 0; flex: 1;" />
+        <button class="btn-browse" id="btn-browse-first-launch" type="button">Browse...</button>
+      </div>
+      <div class="first-launch-hint" id="first-launch-hint"></div>
+    </div>
+    <div class="modal-error" id="first-launch-error"></div>
+    <div class="modal-actions" style="justify-content: center; margin-top: 16px;">
+      <button class="btn-modal-connect" id="btn-first-launch-connect">Connect</button>
+    </div>
+  </div>
+</div>
+
+<!-- JavaScript modules (load order matters) -->
+<script src="/static/js/api.js"></script>
+<script src="/static/js/sidebar.js"></script>
+<script src="/static/js/editor.js"></script>
+
+</body>
+</html>
