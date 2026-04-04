@@ -138,4 +138,4 @@ MIT
 
 ---
 
-*Built with [Claude Code](https://claude.ai/code) using Qwen 3.6 Plus via [OpenRouter](https://openrouter.ai/qwen/qwen3.6-plus:free).*
+*Built with [Free Code](https://github.com/paoloanzn/free-code) using Qwen 3.6 Plus via [OpenRouter](https://openrouter.ai/qwen/qwen3.6-plus:free).*
