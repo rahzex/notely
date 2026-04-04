@@ -12,9 +12,17 @@ A lightweight, self-hosted note-taking application built with Flask and SQLite. 
 
 ## Screenshots
 
-| Light Mode | Dark Mode |
-|------------|-----------|
-| <img src="screenshots/light.png" alt="Light mode"> | <img src="screenshots/dark.png" alt="Dark mode"> |
+<img width="882" height="581" alt="Screenshot 2026-04-04 at 9 39 11 PM" src="https://github.com/user-attachments/assets/98cc82ad-12fb-4a3d-aaca-0c4636edf75f" />
+
+<img width="1440" height="666" alt="Screenshot 2026-04-04 at 9 30 52 PM" src="https://github.com/user-attachments/assets/0e31d0bc-c582-4f98-b1c4-7b739723bfb5" />
+
+<img width="1440" height="818" alt="Screenshot 2026-04-04 at 9 34 22 PM" src="https://github.com/user-attachments/assets/7e117546-6cfe-4678-a74d-037ca8331e17" />
+
+
+<img width="1440" height="712" alt="Screenshot 2026-04-04 at 9 30 40 PM" src="https://github.com/user-attachments/assets/91edee7e-4809-4a92-b1c9-fbe528d17d4a" />
+
+
+
 
 ## Tech Stack
 
