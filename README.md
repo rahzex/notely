@@ -1,4 +1,6 @@
-# Notely
+
+<img width="1536" height="1024" alt="ChatGPT Image Apr 4, 2026 at 09_59_31 PM" src="https://github.com/user-attachments/assets/b32f256f-88d8-4320-9572-7e30eb340ed1" />
+
 
 A lightweight, self-hosted note-taking application built with Flask and SQLite. Features folder organization and a rich text editor powered by Quill.js.
 
