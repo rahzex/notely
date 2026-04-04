@@ -246,8 +246,9 @@
       }).catch(function(err) { console.error("Failed to save note:", err); });
     } else {
       NotelyApi.saveNote(body).then(function(saved) {
-        editingId = saved.id;
-        inpTitle.value = saved.title;
+        var note = saved.data;
+        editingId = note.id;
+        inpTitle.value = note.title;
         loadNotes();
       }).catch(function(err) { console.error("Failed to create note:", err); });
     }
