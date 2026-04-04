@@ -28,16 +28,24 @@ def init_db():
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         title TEXT NOT NULL,
         content TEXT DEFAULT '',
+        folder_id INTEGER,
         url TEXT DEFAULT '',
         preview TEXT DEFAULT '[]',
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )""")
+    db.execute("CREATE TABLE IF NOT EXISTS folders (id INTEGER PRIMARY KEY, name TEXT NOT NULL, parent_id INTEGER)")
     # Drop the old url column if it exists (sqlite migration)
     try:
         db.execute("ALTER TABLE notes DROP COLUMN url")
         db.commit()
     except Exception:
         pass  # column already removed or doesn't exist
+    # Add folder_id if it doesn't exist (existing databases)
+    try:
+        db.execute("ALTER TABLE notes ADD COLUMN folder_id INTEGER")
+        db.commit()
+    except Exception:
+        pass  # column already exists
     db.commit()
     db.close()
 
@@ -79,6 +87,50 @@ def fetch_preview(url):
 @app.route("/")
 def index():
     return render_template("index.html")
+
+
+@app.route("/api/folders", methods=["GET"])
+def list_folders():
+    db = get_db()
+    rows = db.execute("SELECT * FROM folders ORDER BY name").fetchall()
+    return jsonify([{**r} for r in rows])
+
+
+@app.route("/api/folders", methods=["POST"])
+def create_folder():
+    data = request.json
+    name = data.get("name", "").strip()
+    if not name:
+        return jsonify({"error": "name required"}), 400
+    db = get_db()
+    cur = db.execute("INSERT INTO folders (name) VALUES (?)", (name,))
+    db.commit()
+    row = db.execute("SELECT * FROM folders WHERE id = ?", (cur.lastrowid,)).fetchone()
+    return jsonify({**row}), 201
+
+
+@app.route("/api/folders/<int:folder_id>", methods=["PUT"])
+def update_folder(folder_id):
+    data = request.json
+    name = data.get("name", "").strip()
+    if not name:
+        return jsonify({"error": "name required"}), 400
+    db = get_db()
+    db.execute("UPDATE folders SET name=? WHERE id=?", (name, folder_id))
+    db.commit()
+    row = db.execute("SELECT * FROM folders WHERE id = ?", (folder_id,)).fetchone()
+    if not row:
+        return jsonify({"error": "not found"}), 404
+    return jsonify({**row})
+
+
+@app.route("/api/folders/<int:folder_id>", methods=["DELETE"])
+def delete_folder(folder_id):
+    db = get_db()
+    db.execute("UPDATE notes SET folder_id=NULL WHERE folder_id=?", (folder_id,))
+    db.execute("DELETE FROM folders WHERE id=?", (folder_id,))
+    db.commit()
+    return jsonify({"ok": True})
 
 
 @app.route("/api/notes", methods=["GET"])
@@ -136,13 +188,14 @@ def create_note():
     data = request.json
     title = data.get("title", "").strip()
     content = data.get("content", "").strip()
+    folder_id = data.get("folder_id")
 
     urls = extract_urls(content)
     urls.extend([u for u in (data.get("urls") or []) if u and u not in urls])
 
     db = get_db()
-    cur = db.execute("INSERT INTO notes (title, content, preview) VALUES (?, ?, ?)",
-                     (title, content, "[]"))
+    cur = db.execute("INSERT INTO notes (title, content, folder_id, preview) VALUES (?, ?, ?, ?)",
+                     (title, content, folder_id, "[]"))
     db.commit()
     note_id = cur.lastrowid
     db_row = db.execute("SELECT * FROM notes WHERE id = ?", (note_id,)).fetchone()
@@ -158,6 +211,7 @@ def update_note(note_id):
     data = request.json
     title = data.get("title", "").strip()
     content = data.get("content", "").strip()
+    folder_id = data.get("folder_id")
 
     urls = extract_urls(content)
     urls.extend([u for u in (data.get("urls") or []) if u and u not in urls])
@@ -168,8 +222,8 @@ def update_note(note_id):
         return jsonify({"error": "not found"}), 404
 
     current_preview = existing["preview"]
-    db.execute("UPDATE notes SET title=?, content=?, preview=? WHERE id=?",
-               (title, content, current_preview, note_id))
+    db.execute("UPDATE notes SET title=?, content=?, folder_id=?, preview=? WHERE id=?",
+               (title, content, folder_id, current_preview, note_id))
     db.commit()
     row = db.execute("SELECT * FROM notes WHERE id = ?", (note_id,)).fetchone()
 
