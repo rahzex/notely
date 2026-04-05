@@ -257,7 +257,11 @@
         + '<div id="quill-toolbar">'
         + '<div class="ql-formats">'
         + '<select class="ql-header"><option value="1">H1</option><option value="2">H2</option><option value="3">H3</option><option value="4">H4</option><option value="5">H5</option><option value="6">H6</option><option selected>Normal</option></select>'
-        + '<select class="ql-font"><option value="arial">Arial</option><option value="courier-new">Courier New</option><option value="georgia">Georgia</option><option value="times-new-roman">Times New Roman</option><option value="verdana">Verdana</option><option value="sans-serif">Sans Serif</option><option value="serif">Serif</option></select>'
+        + '</div>'
+        + '<div class="ql-formats">'
+        + '<select class="ql-font"><option value="Arial">Arial</option><option value="Courier New">Courier New</option><option value="Georgia">Georgia</option><option value="Times New Roman">Times New Roman</option><option value="Verdana">Verdana</option></select>'
+        + '</div>'
+        + '<div class="ql-formats">'
         + '<select class="ql-size"><option value="8px">8</option><option value="10px">10</option><option value="12px">12</option><option value="14px">14</option><option value="16px">16</option><option selected value="18px">18</option><option value="20px">20</option><option value="24px">24</option><option value="30px">30</option><option value="36px">36</option><option value="48px">48</option></select>'
         + '</div>'
         + '<div class="ql-formats">'
@@ -294,19 +298,20 @@
 
       quillContainer.innerHTML = toolbarHtml;
 
-      // Register custom fonts
-      var FontAttributor = Quill.import('attributors/class/font');
-      FontAttributor.whitelist = [
-        'arial', 'courier-new', 'georgia', 'times-new-roman', 'verdana', 'sans-serif', 'serif'
+      // Override default size values for the ql-size dropdown (inline-style based)
+      var SizeStyleAttributor = Quill.import('attributors/style/size');
+      SizeStyleAttributor.whitelist = ['8px', '10px', '12px', '14px', '16px', '18px', '20px', '24px', '30px', '36px', '48px'];
+      Quill.register(SizeStyleAttributor, true);
+
+      // Override default font family for the ql-font dropdown (inline-style based)
+      var FontFamilyAttributor = Quill.import('attributors/style/font');
+      FontFamilyAttributor.whitelist = [
+        'Arial', 'Courier New', 'Georgia', 'Times New Roman', 'Verdana', 'sans-serif', 'serif', 'monospace'
       ];
-      Quill.register(FontAttributor, true);
+      Quill.register(FontFamilyAttributor, true);
 
-      // Register size attributor
-      var SizeAttributor = Quill.import('attributors/class/size');
-      SizeAttributor.whitelist = ['8px', '10px', '12px', '14px', '16px', '18px', '20px', '24px', '30px', '36px', '48px'];
-      Quill.register(SizeAttributor, true);
-
-      // Quill modules for custom handler
+      // Update ql-size select values to match new whitelist
+      var sizeSelect = document.querySelector('.ql-size');
       var toolbarHandlers = {
         handlers: {
           qlLink: function(value) {
