@@ -1,6 +1,6 @@
 /* ========================================
    Notely - Editor Module
-   Editor.js editor, settings modal,
+   Editor.js + Quill, settings modal,
    first-launch overlay, DB config,
    and bootstrap.
    ======================================== */
@@ -11,34 +11,38 @@
   var $ = function(s) { return document.querySelector(s); };
 
   /* === DOM refs === */
-  var sidebar            = $("#sidebar");
-  var welcome            = $("#welcome");
-  var editorCard         = $("#editor-card");
-  var inpTitle           = $("#inp-title");
-  var btnDelEditor       = $("#btn-del-editor");
-  var btnNew             = $("#btn-new");
-  var btnSave            = $("#btn-save");
-  var btnClear           = $("#btn-clear");
-  var btnSettings        = $("#btn-settings");
-  var btnSettingsCancel  = $("#btn-settings-cancel");
-  var btnSettingsSave    = $("#btn-settings-save");
-  var btnBrowseSettings  = $("#btn-browse-settings");
-  var settingsModal      = $("#settings-modal");
-  var settingsPathInput  = $("#settings-path-input");
-  var settingsCreateNew  = $("#settings-create-new");
-  var settingsCurrentPath = $("#settings-current-path");
-  var settingsError      = $("#settings-error");
-  var firstLaunchOv      = $("#first-launch-overlay");
+  var sidebar              = $("#sidebar");
+  var welcome              = $("#welcome");
+  var editorCard           = $("#editor-card");
+  var inpTitle             = $("#inp-title");
+  var btnDelEditor         = $("#btn-del-editor");
+  var btnNew               = $("#btn-new");
+  var btnSave              = $("#btn-save");
+  var btnClear             = $("#btn-clear");
+  var btnSettings          = $("#btn-settings");
+  var btnSettingsCancel    = $("#btn-settings-cancel");
+  var btnSettingsSave      = $("#btn-settings-save");
+  var btnBrowseSettings    = $("#btn-browse-settings");
+  var settingsModal        = $("#settings-modal");
+  var settingsPathInput    = $("#settings-path-input");
+  var settingsCreateNew    = $("#settings-create-new");
+  var settingsCurrentPath  = $("#settings-current-path");
+  var settingsError        = $("#settings-error");
+  var settingsDefaultEditor = $("#settings-default-editor");
+  var firstLaunchOv        = $("#first-launch-overlay");
   var firstLaunchPathInput = $("#first-launch-path-input");
-  var firstLaunchError   = $("#first-launch-error");
-  var firstLaunchHint    = $("#first-launch-hint");
-  var firstLaunchLabel   = $("#first-launch-label");
+  var firstLaunchError     = $("#first-launch-error");
+  var firstLaunchHint      = $("#first-launch-hint");
+  var firstLaunchLabel     = $("#first-launch-label");
   var btnFirstLaunchConnect = $("#btn-first-launch-connect");
-  var btnBrowseFirstLaunch  = $("#btn-browse-first-launch");
-  var toggleFile         = $("#toggle-file");
-  var toggleFolder       = $("#toggle-folder");
+  var btnBrowseFirstLaunch = $("#btn-browse-first-launch");
+  var toggleFile           = $("#toggle-file");
+  var toggleFolder         = $("#toggle-folder");
   var firstLaunchBrowseMode = { current: "file" };
-  var btnTheme           = $("#btn-theme");
+  var btnTheme             = $("#btn-theme");
+  var editorPickerModal    = $("#editor-picker-modal");
+  var pickerRemember       = $("#picker-remember");
+  var quillContainer       = $("#quill-container");
 
   /* === Theme === */
   function applyTheme(theme) {
@@ -62,11 +66,64 @@
   var editingId = null;
   var editingFolderId = null;
   var currentDbPath = null;
-  var editor = null;
+  var editor = null;       // Editor.js instance
+  var quillEditor = null;  // Quill instance
   var saveTimeout = null;
-  var autosaveDebounce = 3000; // 3 seconds
+  var autosaveDebounce = 3000;
+  var currentEditorMode = null;  // 'editorjs' | 'quill' | null
 
-  /* === Init Editor === */
+  /* === Default Editor Mode === */
+  function getDefaultEditorMode() {
+    return localStorage.getItem("notely-default-editor") || "ask";
+  }
+
+  function setDefaultEditorMode(mode) {
+    localStorage.setItem("notely-default-editor", mode);
+    settingsDefaultEditor.value = mode;
+  }
+
+  /* === Content Format Detection === */
+  function detectContentFormat(content) {
+    if (!content || content.trim() === "") {
+      return { mode: "unknown" };
+    }
+    var trimmed = content.trim();
+    if (trimmed.charAt(0) === "{") {
+      try {
+        var parsed = JSON.parse(trimmed);
+        if (parsed.blocks && Array.isArray(parsed.blocks)) {
+          return { mode: "editorjs", blocks: parsed.blocks };
+        }
+      } catch (e) { /* not JSON */ }
+    }
+    if (trimmed.charAt(0) === "[") {
+      try {
+        var arr = JSON.parse(trimmed);
+        if (Array.isArray(arr) && arr.length > 0 && arr[0].type) {
+          return { mode: "editorjs", blocks: arr };
+        }
+      } catch (e) { /* not JSON */ }
+    }
+    return { mode: "quill", html: content };
+  }
+
+  /* === Editor Container Toggling === */
+  function showEditorContainer(mode) {
+    document.body.classList.remove("editor-active-editorjs", "editor-active-quill");
+    document.body.classList.add("editor-active-" + mode);
+    currentEditorMode = mode;
+  }
+
+  function destroyActiveEditor() {
+    if (currentEditorMode === "quill" && quillEditor) {
+      // Quill doesn't have a destroy() - just clean up the instance
+      quillEditor = null;
+    }
+    document.body.classList.remove("editor-active-editorjs", "editor-active-quill");
+    currentEditorMode = null;
+  }
+
+  /* === Init Editor.js === */
   function initEditor() {
     if (editor) return Promise.resolve();
 
@@ -184,60 +241,312 @@
     });
   }
 
+  /* === Init Quill Rich Text Editor === */
+  function initQuill() {
+    return new Promise(function(resolve, reject) {
+      destroyActiveEditor();
+      if (!quillContainer) { console.error("#quill-container not found"); return reject("No container"); }
+      if (!window.Quill) { console.error("Quill library not loaded"); return reject("Not loaded"); }
+
+      document.body.classList.add("editor-active-quill");
+      quillContainer.innerHTML = '';
+      quillContainer.className = "ql-snow";
+
+      // Build custom toolbar with ALL Quill formats
+      var toolbarHtml = ''
+        + '<div id="quill-toolbar">'
+        + '<div class="ql-formats">'
+        + '<select class="ql-header"><option value="1">H1</option><option value="2">H2</option><option value="3">H3</option><option value="4">H4</option><option value="5">H5</option><option value="6">H6</option><option selected>Normal</option></select>'
+        + '<select class="ql-font"><option value="arial">Arial</option><option value="courier-new">Courier New</option><option value="georgia">Georgia</option><option value="times-new-roman">Times New Roman</option><option value="verdana">Verdana</option><option value="sans-serif">Sans Serif</option><option value="serif">Serif</option></select>'
+        + '<select class="ql-size"><option value="8px">8</option><option value="10px">10</option><option value="12px">12</option><option value="14px">14</option><option value="16px">16</option><option selected value="18px">18</option><option value="20px">20</option><option value="24px">24</option><option value="30px">30</option><option value="36px">36</option><option value="48px">48</option></select>'
+        + '</div>'
+        + '<div class="ql-formats">'
+        + '<button class="ql-bold" title="Bold (Ctrl+B)"></button>'
+        + '<button class="ql-italic" title="Italic (Ctrl+I)"></button>'
+        + '<button class="ql-underline" title="Underline (Ctrl+U)"></button>'
+        + '<button class="ql-strike" title="Strikethrough"></button>'
+        + '<button class="ql-code" title="Inline Code"></button>'
+        + '<button class="ql-code-block" title="Code Block"></button>'
+        + '</div>'
+        + '<div class="ql-formats">'
+        + '<select class="ql-color" title="Text Color"></select>'
+        + '<select class="ql-background" title="Highlight"></select>'
+        + '</div>'
+        + '<div class="ql-formats">'
+        + '<select class="ql-align" title="Text Alignment"></select>'
+        + '<button class="ql-blockquote" title="Blockquote"></button>'
+        + '<button class="ql-indent" value="-1" title="Decrease Indent"></button>'
+        + '<button class="ql-indent" value="+1" title="Increase Indent"></button>'
+        + '</div>'
+        + '<div class="ql-formats">'
+        + '<button class="ql-list" value="ordered" title="Ordered List"></button>'
+        + '<button class="ql-list" value="bullet" title="Bullet List"></button>'
+        + '<button class="ql-clean" title="Clear Formatting"></button>'
+        + '</div>'
+        + '<div class="ql-formats">'
+        + '<button class="ql-link" title="Insert Link"></button>'
+        + '<button class="ql-image" title="Insert Image"></button>'
+        + '<button class="ql-video" title="Insert Video"></button>'
+        + '<button class="ql-formula" title="Insert Formula"></button>'
+        + '</div>'
+        + '</div>'
+        + '<div id="quill-editor"></div>';
+
+      quillContainer.innerHTML = toolbarHtml;
+
+      // Register custom fonts
+      var FontAttributor = Quill.import('attributors/class/font');
+      FontAttributor.whitelist = [
+        'arial', 'courier-new', 'georgia', 'times-new-roman', 'verdana', 'sans-serif', 'serif'
+      ];
+      Quill.register(FontAttributor, true);
+
+      // Register size attributor
+      var SizeAttributor = Quill.import('attributors/class/size');
+      SizeAttributor.whitelist = ['8px', '10px', '12px', '14px', '16px', '18px', '20px', '24px', '30px', '36px', '48px'];
+      Quill.register(SizeAttributor, true);
+
+      // Quill modules for custom handler
+      var toolbarHandlers = {
+        handlers: {
+          qlLink: function(value) {
+            var ctx = this;
+            if (value) {
+              var url = prompt("Enter URL:");
+              if (url) {
+                var range = ctx.quill.getSelection(true);
+                if (range) {
+                  ctx.quill.formatText(range.index, range.length, 'link', url);
+                  ctx.quill.setSelection(range.index + range.length);
+                } else {
+                  var at = ctx.quill.getLength();
+                  ctx.quill.insertText(at, url, 'link', 'url');
+                }
+              }
+              ctx.quill.getModule('toolbar').update();
+            } else {
+              ctx.quill.format('link', false);
+            }
+          }
+        }
+      };
+
+      // Initialize Quill
+      quillEditor = new Quill('#quill-editor', {
+        modules: {
+          toolbar: {
+            container: '#quill-toolbar',
+            handlers: toolbarHandlers.handlers
+          },
+          history: {
+            delay: 2000,
+            maxStack: 500,
+            userOnly: true
+          },
+          keyboard: {
+            bindings: Quill.import('modules/keyboard').DEFAULTS.bindings
+          }
+        },
+        theme: 'snow',
+        placeholder: 'Write your note here…'
+      });
+
+      // Autosave on text change
+      quillEditor.on('text-change', function() {
+        triggerAutosave();
+      });
+
+      // Open image URL in a prompt
+      quillEditor.getModule('toolbar').addHandler('image', function() {
+        var src = prompt("Enter image URL:");
+        if (src) {
+          var range = quillEditor.getSelection(true);
+          quillEditor.insertText(range.index, '\n', Quill.sources.USER);
+          quillEditor.insertEmbed(range.index + 1, 'image', src, Quill.sources.USER);
+          quillEditor.setSelection(range.index + 2, Quill.sources.SILENT);
+        }
+      });
+
+      // Open video URL in a prompt
+      quillEditor.getModule('toolbar').addHandler('video', function() {
+        var src = prompt("Enter video URL (YouTube, Vimeo, etc.):");
+        if (src) {
+          var range = quillEditor.getSelection(true);
+          quillEditor.insertEmbed(range.index, 'video', src, Quill.sources.USER);
+          quillEditor.setSelection(range.index + 1, Quill.sources.SILENT);
+        }
+      });
+
+      // Open formula URL in a prompt
+      quillEditor.getModule('toolbar').addHandler('formula', function() {
+        var formula = prompt("Enter LaTeX formula:");
+        if (formula) {
+          var range = quillEditor.getSelection(true);
+          quillEditor.insertEmbed(range.index, 'formula', formula, Quill.sources.USER);
+          quillEditor.setSelection(range.index + 1, Quill.sources.SILENT);
+        }
+      });
+
+      inpTitle.focus();
+      currentEditorMode = "quill";
+      resolve();
+    });
+  }
+
+  /* === Activate Editor for New Note === */
+  function activateEditorForNewNote(mode) {
+    destroyActiveEditor();
+    if (mode === "editorjs") {
+      initEditor().then(function() {
+        showEditorContainer("editorjs");
+        currentEditorMode = "editorjs";
+        editor.blocks.render({ blocks: [] });
+        inpTitle.focus();
+      }).catch(function(e) {
+        console.error("Failed to init Editor.js:", e);
+      });
+    } else if (mode === "quill") {
+      initQuill().then(function() {
+        showEditorContainer("quill");
+        currentEditorMode = "quill";
+        inpTitle.focus();
+      }).catch(function(e) {
+        console.error("Failed to init Quill:", e);
+      });
+    }
+  }
+
   /* === Auto-save === */
   function triggerAutosave() {
-    if (!editingId) return; // Don't autosave a blank new note
+    if (!editingId) return;
     if (saveTimeout) clearTimeout(saveTimeout);
     saveTimeout = setTimeout(function() {
-      editor.save().then(function(outputData) {
-        var content = JSON.stringify(outputData.blocks);
-        var body = { title: inpTitle.value, content: content, folder_id: NotelySidebar.getActiveFolderId() };
-        NotelyApi.updateNote(editingId, body).then(function(saved) {
-          inpTitle.value = saved.title;
-          loadNotes();
+      if (currentEditorMode === "quill" && quillEditor) {
+        var content = quillEditor.root.innerHTML;
+        doAutosave(content);
+      } else if (currentEditorMode === "editorjs" && editor) {
+        editor.save().then(function(outputData) {
+          doAutosave(JSON.stringify(outputData.blocks));
         }).catch(function(err) {
-          console.error("Autosave failed:", err);
+          console.error("Autosave save() error:", err);
         });
-      }).catch(function(err) {
-        console.error("Autosave save() error:", err);
-      });
+      }
     }, autosaveDebounce);
+  }
+
+  function doAutosave(content) {
+    var body = { title: inpTitle.value, content: content, folder_id: NotelySidebar.getActiveFolderId() };
+    NotelyApi.updateNote(editingId, body).catch(function(err) {
+      console.error("Autosave failed:", err);
+    });
+  }
+
+  /* === Save Helpers === */
+  function saveFromEditorJS() {
+    editor.save().then(function(outputData) {
+      doSave(JSON.stringify(outputData.blocks));
+    }).catch(function(err) {
+      console.error("Failed to extract editor content:", err);
+    });
+  }
+
+  function saveFromQuill() {
+    var content = quillEditor.root.innerHTML;
+    doSave(content);
+  }
+
+  function doSave(content) {
+    var body = { title: inpTitle.value, content: content, folder_id: NotelySidebar.getActiveFolderId() };
+    if (editingId) {
+      NotelyApi.updateNote(editingId, body).then(function(saved) {
+        editingId = saved.id;
+        inpTitle.value = saved.title;
+        loadNotes();
+      }).catch(function(err) { console.error("Failed to save note:", err); });
+    } else {
+      NotelyApi.saveNote(body).then(function(saved) {
+        var note = saved.data;
+        editingId = note.id;
+        inpTitle.value = note.title;
+        loadNotes();
+      }).catch(function(err) { console.error("Failed to create note:", err); });
+    }
+  }
+
+  /* === Editor Picker === */
+  function showEditorPicker() {
+    editorPickerModal.classList.add("open");
+    pickerRemember.checked = false;
+  }
+
+  function hideEditorPicker() {
+    editorPickerModal.classList.remove("open");
+  }
+
+  function pickEditorAndProceed(mode) {
+    hideEditorPicker();
+    if (pickerRemember.checked) {
+      setDefaultEditorMode(mode);
+    }
+    activateEditorForNewNote(mode);
   }
 
   /* === Show editor / welcome === */
   function showEditor(note) {
     welcome.classList.remove("visible");
     editorCard.classList.add("visible");
-    initEditor().then(function() {
-      if (note) {
-        editingId = note.id;
-        inpTitle.value = note.title;
-        try {
-          var blocks = JSON.parse(note.content || '{"blocks":[]}');
-          editor.blocks.render({ blocks: blocks });
-        } catch (e) {
-          console.error("Failed to load note content, rendering empty editor:", e);
-          editor.blocks.render({ blocks: [] });
-        }
-        btnDelEditor.style.display = "";
-        NotelySidebar.renderAll();
+
+    if (note) {
+      // Existing note: detect content format
+      editingId = note.id;
+      inpTitle.value = note.title;
+      btnDelEditor.style.display = "";
+      NotelySidebar.renderAll();
+
+      var detected = detectContentFormat(note.content);
+      if (detected.mode === "editorjs") {
+        initEditor().then(function() {
+          destroyActiveEditor();
+          showEditorContainer("editorjs");
+          try {
+            editor.blocks.render({ blocks: detected.blocks });
+          } catch (e) {
+            console.error("Failed to render blocks, clearing:", e);
+            editor.blocks.render({ blocks: [] });
+          }
+          inpTitle.focus();
+        }).catch(function(e) {
+          console.error("Failed to initialize Editor.js:", e);
+        });
       } else {
-        editingId = null;
-        editingFolderId = NotelySidebar.getActiveFolderId();
-        inpTitle.value = "";
-        editor.blocks.render({ blocks: [] });
-        btnDelEditor.style.display = "none";
-        NotelySidebar.renderAll();
+        initQuill().then(function() {
+          quillEditor.root.innerHTML = detected.html || "";
+          inpTitle.focus();
+        }).catch(function(e) {
+          console.error("Failed to initialize Quill:", e);
+        });
       }
-      inpTitle.focus();
-    }).catch(function(e) {
-      console.error("Failed to initialize editor:", e);
-    });
+    } else {
+      // New/blank note: check default editor setting
+      editingId = null;
+      editingFolderId = NotelySidebar.getActiveFolderId();
+      inpTitle.value = "";
+      btnDelEditor.style.display = "none";
+      NotelySidebar.renderAll();
+
+      var defaultMode = getDefaultEditorMode();
+      if (defaultMode === "ask") {
+        showEditorPicker();
+      } else {
+        activateEditorForNewNote(defaultMode);
+      }
+    }
   }
 
   function showWelcome() {
     welcome.classList.add("visible");
     editorCard.classList.remove("visible");
+    destroyActiveEditor();
     editingId = null;
     NotelySidebar.renderAll();
   }
@@ -307,6 +616,7 @@
     settingsModal.classList.add("open");
     settingsCurrentPath.textContent = currentDbPath || "Not configured";
     settingsPathInput.value = "";
+    settingsDefaultEditor.value = getDefaultEditorMode();
     hideError(settingsError);
     settingsCreateNew.checked = true;
   }
@@ -350,28 +660,13 @@
 
   /* === Event Listeners === */
 
-  /* Save */
+  /* Save — route to active editor */
   btnSave.addEventListener("click", function() {
-    editor.save().then(function(outputData) {
-      var content = JSON.stringify(outputData.blocks);
-      var body = { title: inpTitle.value, content: content, folder_id: NotelySidebar.getActiveFolderId() };
-      if (editingId) {
-        NotelyApi.updateNote(editingId, body).then(function(saved) {
-          editingId = saved.id;
-          inpTitle.value = saved.title;
-          loadNotes();
-        }).catch(function(err) { console.error("Failed to save note:", err); });
-      } else {
-        NotelyApi.saveNote(body).then(function(saved) {
-          var note = saved.data;
-          editingId = note.id;
-          inpTitle.value = note.title;
-          loadNotes();
-        }).catch(function(err) { console.error("Failed to create note:", err); });
-      }
-    }).catch(function(err) {
-      console.error("Failed to extract editor content:", err);
-    });
+    if (currentEditorMode === "quill" && quillEditor) {
+      saveFromQuill();
+    } else {
+      saveFromEditorJS();
+    }
   });
 
   /* New note */
@@ -405,6 +700,24 @@
   });
   btnBrowseSettings.addEventListener("click", function() {
     browseFolder(settingsPathInput, settingsError);
+  });
+
+  /* Default editor setting */
+  settingsDefaultEditor.addEventListener("change", function() {
+    setDefaultEditorMode(this.value);
+  });
+
+  /* Editor picker */
+  var pickerOptions = document.querySelectorAll("[data-picker-mode]");
+  for (var i = 0; i < pickerOptions.length; i++) {
+    (function(opt) {
+      opt.addEventListener("click", function() {
+        pickEditorAndProceed(opt.getAttribute("data-picker-mode"));
+      });
+    })(pickerOptions[i]);
+  }
+  editorPickerModal.addEventListener("click", function(e) {
+    if (e.target === editorPickerModal) hideEditorPicker();
   });
 
   /* === DB Config check on startup === */
@@ -443,6 +756,9 @@
     }
   }
 
+  // Set default editor mode select on boot
+  settingsDefaultEditor.value = getDefaultEditorMode();
+
   toggleFile.addEventListener("click", function() {
     firstLaunchBrowseMode.current = "file";
     updateFirstLaunchUI();
@@ -470,7 +786,6 @@
       return;
     }
     if (firstLaunchBrowseMode.current === "folder") {
-      // Ensure trailing slash, then append db filename
       if (!path.endsWith("/")) path = path + "/";
       path = path + "notes.db";
       firstLaunchPathInput.value = path;

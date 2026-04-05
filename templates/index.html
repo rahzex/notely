@@ -4,8 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Notely</title>
-<link href="/static/css/styles.css?v=2" rel="stylesheet">
-<!-- Editor.js CDN dependencies -->
+<link href="/static/css/styles.css?v=3" rel="stylesheet">
 <!-- Editor.js CDN dependencies -->
 <script src="https://cdn.jsdelivr.net/npm/@editorjs/editorjs@latest/dist/editorjs.umd.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@editorjs/header@latest/dist/bundle.js"></script>
@@ -26,6 +25,9 @@
 <script src="https://cdn.jsdelivr.net/npm/@editorjs/attaches@latest/dist/bundle.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/editorjs-alert@latest/dist/bundle.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/editorjs-toggle-block@latest/dist/bundle.js"></script>
+<!-- Quill 2 Rich Text Editor -->
+<link href="https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.snow.css" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.js"></script>
 <script>
   (function(){var t=localStorage.getItem("notely-theme");if(t==="dark")document.documentElement.setAttribute("data-theme","dark")})();
 </script>
@@ -68,6 +70,7 @@
       <div class="editor-wrap">
         <input class="title-input" id="inp-title" placeholder="Title" />
         <div id="editorjs"></div>
+        <div id="quill-container"></div>
         <div class="editor-actions">
           <button class="btn-clear" id="btn-clear">Clear</button>
           <button class="btn-save-main" id="btn-save">Save Note</button>
@@ -84,6 +87,12 @@
     <h3>Database Path</h3>
     <label class="modal-label">Current database</label>
     <div class="modal-path-display" id="settings-current-path">Not configured</div>
+    <label class="modal-label" for="settings-default-editor">Default editor for new notes</label>
+    <select class="modal-input" id="settings-default-editor" style="margin-bottom:16px">
+      <option value="ask">Ask me each time</option>
+      <option value="editorjs">Editor.js</option>
+      <option value="quill">Quill</option>
+    </select>
     <label class="modal-label" for="settings-path-input">New path</label>
     <div style="display: flex; gap: 8px;">
       <input class="modal-input" id="settings-path-input" type="text" placeholder="/path/to/notes.db" style="margin-bottom: 0; flex: 1;" />
@@ -97,6 +106,30 @@
     <div class="modal-actions">
       <button class="btn-modal-cancel" id="btn-settings-cancel">Cancel</button>
       <button class="btn-modal-connect" id="btn-settings-save">Connect</button>
+    </div>
+  </div>
+</div>
+
+<!-- Editor Picker Modal -->
+<div class="modal-backdrop" id="editor-picker-modal">
+  <div class="modal-card modal-card-editor-picker">
+    <h3>Choose Editor</h3>
+    <p class="editor-picker-subtitle">Which editor would you like to use?</p>
+    <div class="editor-picker-options">
+      <button class="editor-picker-option" data-picker-mode="editorjs">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="4" rx="1"/><rect x="3" y="10" width="12" height="3" rx="1"/><rect x="3" y="16" width="15" height="3" rx="1"/></svg>
+        <span>Editor.js</span>
+        <small>Notion like block-style</small>
+      </button>
+      <button class="editor-picker-option" data-picker-mode="quill">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 7h16M4 12h16M4 17h10"/></svg>
+        <span>Quill</span>
+        <small>Classic Rich text editor</small>
+      </button>
+    </div>
+    <div class="modal-checkbox-row" style="margin-top:16px">
+      <input type="checkbox" id="picker-remember" />
+      <label for="picker-remember">Remember my choice</label>
     </div>
   </div>
 </div>
