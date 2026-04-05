@@ -272,14 +272,42 @@ def delete_note(note_id):
     return jsonify({"ok": True})
 
 
-@app.route("/api/preview", methods=["POST"])
+@app.route("/api/preview", methods=["GET", "POST"])
 def preview_url():
-    """Fetch preview without saving a note."""
-    data = request.json
-    url = data.get("url", "").strip()
+    """
+    Fetch link preview for Editor.js LinkTool.
+    LinkTool may send POST { "url": "..." } or GET ?url=...
+    Expects: { "success": 1, "meta": { "title", "description", "image": { "url" }, "favicon" } }
+    """
+    if request.method == "GET":
+        url = request.args.get("url", "").strip()
+    else:
+        data = request.json or {}
+        url = data.get("url", "").strip()
     if not url:
-        return jsonify({"error": "no url"}), 400
-    return jsonify(fetch_preview(url))
+        return jsonify({"success": 0}), 400
+
+    og = fetch_preview(url)
+
+    if og.get("error"):
+        # Return a minimal success with just the URL so LinkTool still embeds it
+        return jsonify({"success": 1, "meta": {"title": url, "description": "", "image": {"url": ""}, "favicon": ""}})
+
+    response_data = {
+        "success": 1,
+        "meta": {
+            "title": og.get("title", ""),
+            "description": og.get("description", ""),
+            "image": {"url": og.get("image", "")},
+            "favicon": "",
+            "youtube_id": og.get("youtube_id"),
+        }
+    }
+    # Include youtube_id so we can render embeds if needed
+    if og.get("youtube_id"):
+        response_data["meta"]["youtube_id"] = og["youtube_id"]
+
+    return jsonify(response_data)
 
 
 def validate_existing_db(path):

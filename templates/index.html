@@ -4,9 +4,28 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Notely</title>
-<link href="/static/quill.snow.css?v=2" rel="stylesheet">
-<link href="/static/css/styles.css?v=1" rel="stylesheet">
-<script src="/static/quill.js?v=2"></script>
+<link href="/static/css/styles.css?v=2" rel="stylesheet">
+<!-- Editor.js CDN dependencies -->
+<!-- Editor.js CDN dependencies -->
+<script src="https://cdn.jsdelivr.net/npm/@editorjs/editorjs@latest/dist/editorjs.umd.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@editorjs/header@latest/dist/bundle.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@editorjs/list@latest/dist/bundle.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@editorjs/quote@latest/dist/bundle.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@editorjs/code@latest/dist/bundle.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@editorjs/delimiter@latest/dist/bundle.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@editorjs/marker@latest/dist/bundle.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@editorjs/inline-code@latest/dist/bundle.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@editorjs/paragraph@latest/dist/bundle.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@editorjs/table@latest/dist/bundle.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@editorjs/checklist@latest/dist/bundle.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@editorjs/embed@latest/dist/bundle.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@editorjs/link@latest/dist/bundle.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@editorjs/raw@latest/dist/bundle.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@editorjs/simple-image@latest/dist/bundle.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@editorjs/warning@latest/dist/bundle.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@editorjs/attaches@latest/dist/bundle.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/editorjs-alert@latest/dist/bundle.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/editorjs-toggle-block@latest/dist/bundle.js"></script>
 <script>
   (function(){var t=localStorage.getItem("notely-theme");if(t==="dark")document.documentElement.setAttribute("data-theme","dark")})();
 </script>
@@ -48,7 +67,7 @@
     <div id="editor-card">
       <div class="editor-wrap">
         <input class="title-input" id="inp-title" placeholder="Title" />
-        <div id="quill-editor"></div>
+        <div id="editorjs"></div>
         <div class="editor-actions">
           <button class="btn-clear" id="btn-clear">Clear</button>
           <button class="btn-save-main" id="btn-save">Save Note</button>

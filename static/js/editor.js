@@ -1,7 +1,8 @@
 /* ========================================
    Notely - Editor Module
-   Quill editor, settings modal, first-launch
-   overlay, DB config, and Bootstrap.
+   Editor.js editor, settings modal,
+   first-launch overlay, DB config,
+   and bootstrap.
    ======================================== */
 
 (function() {
@@ -10,34 +11,34 @@
   var $ = function(s) { return document.querySelector(s); };
 
   /* === DOM refs === */
-  var sidebar          = $("#sidebar");
-  var welcome          = $("#welcome");
-  var editorCard       = $("#editor-card");
-  var inpTitle         = $("#inp-title");
-  var btnDelEditor     = $("#btn-del-editor");
-  var btnNew           = $("#btn-new");
-  var btnSave          = $("#btn-save");
-  var btnClear         = $("#btn-clear");
-  var btnSettings      = $("#btn-settings");
-  var btnSettingsCancel = $("#btn-settings-cancel");
-  var btnSettingsSave  = $("#btn-settings-save");
-  var btnBrowseSettings = $("#btn-browse-settings");
-  var settingsModal    = $("#settings-modal");
-  var settingsPathInput = $("#settings-path-input");
-  var settingsCreateNew = $("#settings-create-new");
+  var sidebar            = $("#sidebar");
+  var welcome            = $("#welcome");
+  var editorCard         = $("#editor-card");
+  var inpTitle           = $("#inp-title");
+  var btnDelEditor       = $("#btn-del-editor");
+  var btnNew             = $("#btn-new");
+  var btnSave            = $("#btn-save");
+  var btnClear           = $("#btn-clear");
+  var btnSettings        = $("#btn-settings");
+  var btnSettingsCancel  = $("#btn-settings-cancel");
+  var btnSettingsSave    = $("#btn-settings-save");
+  var btnBrowseSettings  = $("#btn-browse-settings");
+  var settingsModal      = $("#settings-modal");
+  var settingsPathInput  = $("#settings-path-input");
+  var settingsCreateNew  = $("#settings-create-new");
   var settingsCurrentPath = $("#settings-current-path");
-  var settingsError    = $("#settings-error");
-  var firstLaunchOv    = $("#first-launch-overlay");
+  var settingsError      = $("#settings-error");
+  var firstLaunchOv      = $("#first-launch-overlay");
   var firstLaunchPathInput = $("#first-launch-path-input");
-  var firstLaunchError = $("#first-launch-error");
-  var firstLaunchHint = $("#first-launch-hint");
-  var firstLaunchLabel = $("#first-launch-label");
+  var firstLaunchError   = $("#first-launch-error");
+  var firstLaunchHint    = $("#first-launch-hint");
+  var firstLaunchLabel   = $("#first-launch-label");
   var btnFirstLaunchConnect = $("#btn-first-launch-connect");
-  var btnBrowseFirstLaunch = $("#btn-browse-first-launch");
-  var toggleFile = $("#toggle-file");
-  var toggleFolder = $("#toggle-folder");
+  var btnBrowseFirstLaunch  = $("#btn-browse-first-launch");
+  var toggleFile         = $("#toggle-file");
+  var toggleFolder       = $("#toggle-folder");
   var firstLaunchBrowseMode = { current: "file" };
-  var btnTheme = $("#btn-theme");
+  var btnTheme           = $("#btn-theme");
 
   /* === Theme === */
   function applyTheme(theme) {
@@ -61,62 +62,177 @@
   var editingId = null;
   var editingFolderId = null;
   var currentDbPath = null;
-  var quill = null;
+  var editor = null;
+  var saveTimeout = null;
+  var autosaveDebounce = 3000; // 3 seconds
 
-  /* === Init Quill === */
-  function initQuill() {
-    if (quill) return;
-    var container = document.getElementById("quill-editor");
-    if (!container) { console.error("#quill-editor not found"); return; }
+  /* === Init Editor === */
+  function initEditor() {
+    if (editor) return Promise.resolve();
+
+    var container = document.getElementById("editorjs");
+    if (!container) { console.error("#editorjs not found"); return Promise.reject("No container"); }
     container.innerHTML = "";
-    try {
-      quill = new Quill(container, {
-        theme: "snow",
-        placeholder: "Write your note here\u2026",
-        modules: {
-          toolbar: [
-            ["bold", "italic", "underline", "strike"],
-            [{ size: ["small", "normal", "large"] }],
-            [{ color: [] }],
-            [{ list: "ordered" }, { list: "bullet" }],
-            ["blockquote", "code-block"],
-            ["link", "clean"]
-          ]
-        }
+
+    return new Promise(function(resolve, reject) {
+      try {
+        editor = new EditorJS({
+          holder: 'editorjs',
+          placeholder: 'Write your note here\u2026',
+          autofocus: false,
+          tools: {
+            header: {
+              class: Header,
+              inlineToolbar: ['link', 'bold', 'italic', 'marker'],
+              config: {
+                placeholder: 'Heading',
+                levels: [2, 3, 4],
+                defaultLevel: 2
+              }
+            },
+            list: {
+              class: List,
+              inlineToolbar: true
+            },
+            quote: {
+              class: Quote,
+              inlineToolbar: ['link', 'bold', 'italic'],
+              config: {
+                quotePlaceholder: 'Quote',
+                captionPlaceholder: 'Author'
+              }
+            },
+            code: {
+              class: CodeTool
+            },
+            delimiter: {
+              class: Delimiter
+            },
+            marker: {
+              class: Marker
+            },
+            inlineCode: {
+              class: InlineCode
+            },
+            checklist: {
+              class: Checklist,
+              inlineToolbar: true
+            },
+            table: {
+              class: Table,
+              inlineToolbar: true
+            },
+            embed: {
+              class: Embed,
+              inlineToolbar: true,
+              config: {
+                services: {
+                  youtube: true,
+                  coub: true,
+                  imgur: true,
+                  vimeo: true,
+                  codepen: true,
+                  jsfiddle: true,
+                  twitch: true,
+                  aparat: true,
+                  pinterest: true,
+                  rumble: true
+                }
+              }
+            },
+            linkTool: {
+              class: LinkTool,
+              inlineToolbar: true,
+              config: {
+                endpoint: '/api/preview'
+              }
+            },
+            raw: {
+              class: RawTool,
+              inlineToolbar: true
+            },
+            image: {
+              class: SimpleImage,
+              inlineToolbar: true
+            },
+            warning: {
+              class: Warning,
+              inlineToolbar: true
+            },
+            attaches: {
+              class: AttachesTool,
+              inlineToolbar: true
+            },
+            alert: {
+              class: Alert,
+              inlineToolbar: true
+            },
+            toggleBlock: {
+              class: ToggleBlock,
+              inlineToolbar: true
+            }
+          },
+          onReady: function() {
+            resolve();
+          }
+        });
+      } catch (e) {
+        console.error("Editor.js init failed:", e);
+        editor = null;
+        reject(e);
+      }
+    });
+  }
+
+  /* === Auto-save === */
+  function triggerAutosave() {
+    if (!editingId) return; // Don't autosave a blank new note
+    if (saveTimeout) clearTimeout(saveTimeout);
+    saveTimeout = setTimeout(function() {
+      editor.save().then(function(outputData) {
+        var content = JSON.stringify(outputData.blocks);
+        var body = { title: inpTitle.value, content: content, folder_id: NotelySidebar.getActiveFolderId() };
+        NotelyApi.updateNote(editingId, body).then(function(saved) {
+          inpTitle.value = saved.title;
+          loadNotes();
+        }).catch(function(err) {
+          console.error("Autosave failed:", err);
+        });
+      }).catch(function(err) {
+        console.error("Autosave save() error:", err);
       });
-      quill.root.style.position = "relative";
-    } catch (e) {
-      console.error("Quill init failed:", e);
-      container.innerHTML = "";
-      quill = null;
-    }
+    }, autosaveDebounce);
   }
 
   /* === Show editor / welcome === */
   function showEditor(note) {
     welcome.classList.remove("visible");
     editorCard.classList.add("visible");
-    initQuill();
-    if (note) {
-      editingId = note.id;
-      inpTitle.value = note.title;
-      try {
-        quill.clipboard.dangerouslyPasteHTML(note.content || "");
-      } catch (e) {
-        console.error("Failed to load note content, falling back to plain text:", e);
-        quill.setText("");
+    initEditor().then(function() {
+      if (note) {
+        editingId = note.id;
+        inpTitle.value = note.title;
+        try {
+          var blocks = JSON.parse(note.content || '{"blocks":[]}');
+          editor.blocks.render({ blocks: blocks });
+        } catch (e) {
+          console.error("Failed to load note content, rendering empty editor:", e);
+          editor.blocks.render({ blocks: [] });
+        }
+        btnDelEditor.style.display = "";
+        NotelySidebar.renderAll();
+      } else {
+        editingId = null;
+        editingFolderId = NotelySidebar.getActiveFolderId();
+        inpTitle.value = "";
+        editor.blocks.render({ blocks: [] });
+        btnDelEditor.style.display = "none";
+        NotelySidebar.renderAll();
       }
-      btnDelEditor.style.display = "";
-      NotelySidebar.renderAll();
-    } else {
-      editingId = null;
-      editingFolderId = NotelySidebar.getActiveFolderId();
-      inpTitle.value = "";
-      if (quill) quill.setText("");
-      btnDelEditor.style.display = "none";
-      NotelySidebar.renderAll();
-    }
-    inpTitle.focus();
+      inpTitle.focus();
+    }).catch(function(e) {
+      console.error("Failed to initialize editor:", e);
+    });
   }
 
   function showWelcome() {
@@ -236,22 +352,26 @@
 
   /* Save */
   btnSave.addEventListener("click", function() {
-    var content = quill.root.innerHTML;
-    var body = { title: inpTitle.value, content: content, folder_id: NotelySidebar.getActiveFolderId() };
-    if (editingId) {
-      NotelyApi.updateNote(editingId, body).then(function(saved) {
-        editingId = saved.id;
-        inpTitle.value = saved.title;
-        loadNotes();
-      }).catch(function(err) { console.error("Failed to save note:", err); });
-    } else {
-      NotelyApi.saveNote(body).then(function(saved) {
-        var note = saved.data;
-        editingId = note.id;
-        inpTitle.value = note.title;
-        loadNotes();
-      }).catch(function(err) { console.error("Failed to create note:", err); });
-    }
+    editor.save().then(function(outputData) {
+      var content = JSON.stringify(outputData.blocks);
+      var body = { title: inpTitle.value, content: content, folder_id: NotelySidebar.getActiveFolderId() };
+      if (editingId) {
+        NotelyApi.updateNote(editingId, body).then(function(saved) {
+          editingId = saved.id;
+          inpTitle.value = saved.title;
+          loadNotes();
+        }).catch(function(err) { console.error("Failed to save note:", err); });
+      } else {
+        NotelyApi.saveNote(body).then(function(saved) {
+          var note = saved.data;
+          editingId = note.id;
+          inpTitle.value = note.title;
+          loadNotes();
+        }).catch(function(err) { console.error("Failed to create note:", err); });
+      }
+    }).catch(function(err) {
+      console.error("Failed to extract editor content:", err);
+    });
   });
 
   /* New note */
