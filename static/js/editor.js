@@ -21,6 +21,7 @@
   var btnClear             = $("#btn-clear");
   var btnSettings          = $("#btn-settings");
   var btnSettingsCancel    = $("#btn-settings-cancel");
+  var btnSettingsConnect   = $("#btn-settings-connect");
   var btnSettingsSave      = $("#btn-settings-save");
   var btnBrowseSettings    = $("#btn-browse-settings");
   var settingsModal        = $("#settings-modal");
@@ -28,6 +29,7 @@
   var settingsCreateNew    = $("#settings-create-new");
   var settingsCurrentPath  = $("#settings-current-path");
   var settingsError        = $("#settings-error");
+  var settingsStatus       = $("#settings-status");
   var settingsDefaultEditor = $("#settings-default-editor");
   var firstLaunchOv        = $("#first-launch-overlay");
   var firstLaunchPathInput = $("#first-launch-path-input");
@@ -39,6 +41,7 @@
   var toggleFile           = $("#toggle-file");
   var toggleFolder         = $("#toggle-folder");
   var firstLaunchBrowseMode = { current: "file" };
+  var settingsBrowseMode = { current: "folder" };
   var btnTheme             = $("#btn-theme");
   var editorPickerModal    = $("#editor-picker-modal");
   var pickerRemember       = $("#picker-remember");
@@ -70,6 +73,7 @@
   var quillEditor = null;  // Quill instance
   var saveTimeout = null;
   var autosaveDebounce = 3000;
+  var autosaveInterval = null;
   var currentEditorMode = null;  // 'editorjs' | 'quill' | null
 
   /* === Default Editor Mode === */
@@ -446,6 +450,31 @@
     });
   }
 
+  /* === Periodic Autosave === */
+  function startPeriodicAutosave() {
+    stopPeriodicAutosave();
+    autosaveInterval = setInterval(function() {
+      if (!editingId) return;
+      if (currentEditorMode === "quill" && quillEditor) {
+        var content = quillEditor.root.innerHTML;
+        doAutosave(content);
+      } else if (currentEditorMode === "editorjs" && editor) {
+        editor.save().then(function(outputData) {
+          doAutosave(JSON.stringify(outputData.blocks));
+        }).catch(function(err) {
+          console.error("Autosave save() error:", err);
+        });
+      }
+    }, 5000);
+  }
+
+  function stopPeriodicAutosave() {
+    if (autosaveInterval) {
+      clearInterval(autosaveInterval);
+      autosaveInterval = null;
+    }
+  }
+
   /* === Save Helpers === */
   function saveFromEditorJS() {
     editor.save().then(function(outputData) {
@@ -474,6 +503,7 @@
         editingId = note.id;
         inpTitle.value = note.title;
         loadNotes();
+        startPeriodicAutosave();
       }).catch(function(err) { console.error("Failed to create note:", err); });
     }
   }
@@ -507,6 +537,7 @@
       inpTitle.value = note.title;
       btnDelEditor.style.display = "";
       NotelySidebar.renderAll();
+      startPeriodicAutosave();
 
       var detected = detectContentFormat(note.content);
       if (detected.mode === "editorjs") {
@@ -553,6 +584,7 @@
     editorCard.classList.remove("visible");
     destroyActiveEditor();
     editingId = null;
+    stopPeriodicAutosave();
     NotelySidebar.renderAll();
   }
 
@@ -585,20 +617,36 @@
     el.style.display = "none";
   }
 
-  function connectDb(path, errorEl, onSuccess) {
+  function showStatus(el, msg) {
+    el.textContent = msg;
+    el.style.display = "block";
+  }
+
+  function hideStatus(el) {
+    el.style.display = "none";
+  }
+
+  function connectDb(path, errorEl, onSuccess, opts) {
     if (!path) {
       showError(errorEl, "Please enter a path.");
       return;
     }
     hideError(errorEl);
+    if (settingsStatus) hideStatus(settingsStatus);
     NotelyApi.setConfig(path).then(function(result) {
       if (!result.ok) {
         showError(errorEl, result.data.error || "Failed to connect.");
         return;
       }
       currentDbPath = result.data.db_path || path;
-      hideFirstLaunchOverlay();
-      hideSettingsModal();
+      if (opts && opts.showStatus && settingsStatus) {
+        showStatus(settingsStatus, "Connected — " + currentDbPath);
+      }
+      if (!(opts && opts.skipOverlayClose)) {
+        hideFirstLaunchOverlay();
+        hideSettingsModal();
+        if (opts && opts.onSuccess) opts.onSuccess(currentDbPath);
+      }
       showMainButtons();
       loadFolders();
       loadNotes();
@@ -617,17 +665,47 @@
     firstLaunchOv.classList.remove("open");
   }
 
+  /* === Settings browse mode toggle === */
+  function updateSettingsBrowseUI() {
+    if (settingsBrowseMode.current === "folder") {
+      settingsToggleFolder.classList.add("active");
+      settingsToggleFile.classList.remove("active");
+      settingsPathInput.placeholder = "/path/to/folder";
+    } else {
+      settingsToggleFile.classList.add("active");
+      settingsToggleFolder.classList.remove("active");
+      settingsPathInput.placeholder = "/path/to/notes.db";
+    }
+  }
+
+  /* === Settings modal state === */
+  var settingsDbConnected = false; // whether Connect was pressed successfully this session
+
   function showSettingsModal() {
     settingsModal.classList.add("open");
+    var card = settingsModal.querySelector(".modal-card");
+    card.classList.remove("animate-close");
+    card.classList.add("animate-open");
     settingsCurrentPath.textContent = currentDbPath || "Not configured";
     settingsPathInput.value = "";
     settingsDefaultEditor.value = getDefaultEditorMode();
     hideError(settingsError);
+    if (settingsStatus) hideStatus(settingsStatus);
     settingsCreateNew.checked = true;
+    settingsDbConnected = false;
+    settingsBrowseMode.current = "folder";
+    updateSettingsBrowseUI();
   }
 
   function hideSettingsModal() {
-    settingsModal.classList.remove("open");
+    var card = settingsModal.querySelector(".modal-card");
+    card.classList.remove("animate-open");
+    card.classList.add("animate-close");
+    setTimeout(function() {
+      settingsModal.classList.remove("open");
+      card.classList.remove("animate-close");
+      card.classList.add("animate-open");
+    }, 200);
   }
 
   /* === Browse wrapper === */
@@ -695,16 +773,56 @@
   settingsModal.addEventListener("click", function(e) {
     if (e.target === settingsModal) hideSettingsModal();
   });
-  btnSettingsSave.addEventListener("click", function() {
-    connectDb(settingsPathInput.value.trim(), settingsError, function() {
+  /* Settings connect + save */
+  btnSettingsConnect.addEventListener("click", function() {
+    var path = settingsPathInput.value.trim();
+    if (!path) {
+      showError(settingsError, "Please enter a path to connect.");
+      return;
+    }
+    hideError(settingsError);
+    if (settingsBrowseMode.current === "folder") {
+      if (!path.endsWith("/")) path = path + "/";
+      path = path + "notes.db";
+    }
+    connectDb(path, settingsError, function() {
       settingsCurrentPath.textContent = currentDbPath;
-    });
+      settingsDbConnected = true;
+    }, { skipOverlayClose: true, showStatus: true });
   });
+
+  btnSettingsSave.addEventListener("click", function() {
+    /* Always save editor preference */
+    setDefaultEditorMode(settingsDefaultEditor.value);
+    /* If connected, currentDbPath was already saved by Connect */
+    hideSettingsModal();
+  });
+
   settingsPathInput.addEventListener("keydown", function(e) {
-    if (e.key === "Enter") btnSettingsSave.click();
+    if (e.key === "Enter") btnSettingsConnect.click();
   });
+
+  /* Settings browse */
   btnBrowseSettings.addEventListener("click", function() {
-    browseFolder(settingsPathInput, settingsError);
+    if (settingsBrowseMode.current === "folder") {
+      browseFolderPath(settingsPathInput, settingsError);
+    } else {
+      browseFolder(settingsPathInput, settingsError);
+    }
+  });
+
+  /* Settings browse mode toggle */
+  var settingsToggleFolder = $("#settings-toggle-folder");
+  var settingsToggleFile = $("#settings-toggle-file");
+
+  settingsToggleFolder.addEventListener("click", function() {
+    settingsBrowseMode.current = "folder";
+    updateSettingsBrowseUI();
+  });
+
+  settingsToggleFile.addEventListener("click", function() {
+    settingsBrowseMode.current = "file";
+    updateSettingsBrowseUI();
   });
 
   /* Default editor setting */

@@ -84,28 +84,40 @@
 <!-- Settings Modal -->
 <div class="modal-backdrop" id="settings-modal">
   <div class="modal-card">
-    <h3>Database Path</h3>
+    <h3>Settings</h3>
+
+    <!-- Current Database -->
     <label class="modal-label">Current database</label>
     <div class="modal-path-display" id="settings-current-path">Not configured</div>
+
+    <!-- Default Editor -->
     <label class="modal-label" for="settings-default-editor">Default editor for new notes</label>
     <select class="modal-input" id="settings-default-editor" style="margin-bottom:16px">
       <option value="ask">Ask me each time</option>
       <option value="editorjs">Editor.js</option>
       <option value="quill">Quill</option>
     </select>
-    <label class="modal-label" for="settings-path-input">New path</label>
+
+    <!-- New Database Path -->
+    <label class="modal-label" for="settings-path-input">New database path (optional)</label>
     <div style="display: flex; gap: 8px;">
-      <input class="modal-input" id="settings-path-input" type="text" placeholder="/path/to/notes.db" style="margin-bottom: 0; flex: 1;" />
+      <input class="modal-input" id="settings-path-input" type="text" placeholder="/path/to/folder or /path/to/notes.db" style="margin-bottom: 0; flex: 1;" />
       <button class="btn-browse" id="btn-browse-settings" type="button">Browse...</button>
+    </div>
+    <div class="browse-mode-toggle" style="margin-top:6px; margin-bottom:4px;">
+      <button class="toggle-btn active" id="settings-toggle-folder" type="button">Folder</button>
+      <button class="toggle-btn" id="settings-toggle-file" type="button">.db File</button>
     </div>
     <div class="modal-checkbox-row">
       <input type="checkbox" id="settings-create-new" />
       <label for="settings-create-new">Create new database at this path if it doesn't exist</label>
     </div>
+    <div class="modal-status" id="settings-status"></div>
     <div class="modal-error" id="settings-error"></div>
     <div class="modal-actions">
       <button class="btn-modal-cancel" id="btn-settings-cancel">Cancel</button>
-      <button class="btn-modal-connect" id="btn-settings-save">Connect</button>
+      <button class="btn-modal-connect" id="btn-settings-connect">Connect</button>
+      <button class="btn-modal-save" id="btn-settings-save">Save</button>
     </div>
   </div>
 </div>
