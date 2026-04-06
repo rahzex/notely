@@ -350,7 +350,7 @@ header h1 span { color: var(--accent); }
 .modal-card h3 { font-size: 16px; font-weight: 600; margin-bottom: 16px; }
 .modal-label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.6px; color: var(--muted); margin-bottom: 6px; display: block; }
 .modal-path-display { font-size: 12px; padding: 8px 10px; background: var(--bg); border-radius: 8px; color: var(--text); word-break: break-all; margin-bottom: 16px; font-family: -apple-system, BlinkMacSystemFont, monospace; }
-.modal-input { width: 100%; padding: 8px 12px; border: 1px solid var(--border); border-radius: 8px; font-size: 13px; font-family: -apple-system, BlinkMacSystemFont, monospace; background: var(--card); outline: none; transition: border-color var(--anim-fast); margin-bottom: 12px; }
+.modal-input { width: 100%; padding: 8px 12px; border: 1px solid var(--border); border-radius: 8px; font-size: 13px; font-family: -apple-system, BlinkMacSystemFont, monospace; background: var(--card); color: var(--text); outline: none; transition: border-color var(--anim-fast); margin-bottom: 12px; }
 .modal-input:focus { border-color: var(--accent); }
 .modal-checkbox-row { display: flex; align-items: center; gap: 8px; margin-bottom: 16px; font-size: 13px; color: var(--text); }
 .modal-checkbox-row input[type="checkbox"] { accent-color: var(--accent); }

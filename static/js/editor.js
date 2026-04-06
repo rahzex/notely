@@ -445,7 +445,10 @@
 
   function doAutosave(content) {
     var body = { title: inpTitle.value, content: content, folder_id: NotelySidebar.getActiveFolderId() };
-    NotelyApi.updateNote(editingId, body).catch(function(err) {
+    NotelyApi.updateNote(editingId, body).then(function(saved) {
+      /* Update noteId, title in sidebar cache (silent, no blink animation) */
+      NotelySidebar.refreshNoteCache(true);
+    }).catch(function(err) {
       console.error("Autosave failed:", err);
     });
   }
@@ -465,7 +468,7 @@
           console.error("Autosave save() error:", err);
         });
       }
-    }, 5000);
+    }, 60000);
   }
 
   function stopPeriodicAutosave() {

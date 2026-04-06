@@ -1,3 +1,4 @@
+import logging
 import os
 import platform
 import subprocess
@@ -8,7 +9,10 @@ from pathlib import Path
 from bs4 import BeautifulSoup
 from flask import Flask, render_template, request, jsonify, g
 
+logging.basicConfig(level=logging.INFO)
+
 app = Flask(__name__)
+app.logger.setLevel(logging.INFO)
 CONFIG_PATH = Path(__file__).parent / "db_config.json"
 
 
@@ -220,6 +224,7 @@ def create_note():
     title = data.get("title", "").strip()
     content = data.get("content", "").strip()
     folder_id = data.get("folder_id")
+    app.logger.info(f"POST /api/notes — title='{title}' content='{content[:60]}...' folder_id={folder_id}")
 
     urls = extract_urls(content)
     urls.extend([u for u in (data.get("urls") or []) if u and u not in urls])
@@ -243,6 +248,7 @@ def update_note(note_id):
     title = data.get("title", "").strip()
     content = data.get("content", "").strip()
     folder_id = data.get("folder_id")
+    app.logger.info(f"PUT /api/notes/{note_id} — title='{title}' content='{content[:60]}...' folder_id={folder_id}")
 
     urls = extract_urls(content)
     urls.extend([u for u in (data.get("urls") or []) if u and u not in urls])
