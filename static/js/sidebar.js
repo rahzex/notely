@@ -272,6 +272,19 @@ var NotelySidebar = (function() {
     toggleFolder: toggleFolder,
     setNotes: function(notes) { allNotes = notes; renderAll(); },
     setFolders: function(folders) { allFolders = folders; renderAll(); },
+    refreshNoteCache: function(autosave) {
+      NotelyApi.listNotes().then(function(notes) {
+        allNotes = notes;
+        /* Update title in DOM without re-rendering (prevents blink animation) */
+        for (var i = 0; i < notes.length; i++) {
+          var item = document.querySelector('.note-item[data-note-id="' + notes[i].id + '"] h4');
+          if (item) {
+            item.textContent = stripHtml(notes[i].title) || "Untitled";
+          }
+        }
+        if (!autosave) renderAll();
+      });
+    },
     getActiveFolderId: function() { return activeFolderId; },
     getExpandedFolders: function() { return expandedFolders; },
     getNotes: function() { return allNotes; },
