@@ -56,11 +56,17 @@ A lightweight, self-hosted note-taking application built with Flask and SQLite. 
 
 ### Quick Setup (one command)
 
+**macOS / Linux:**
 ```bash
 curl -fsSL https://raw.githubusercontent.com/rahzex/notely/main/run.sh | bash
 ```
 
-This downloads and runs the setup script, which creates a virtual environment, installs dependencies, and starts the server.
+**Windows (PowerShell):**
+```powershell
+irm "https://raw.githubusercontent.com/rahzex/notely/main/run.ps1" | iex
+```
+
+Each script clones the repo (if not already present), creates a virtual environment, installs dependencies, and starts the server. If Notely is already installed and running, it skips re-cloning.
 
 ### Prerequisites
 
